@@ -1,0 +1,70 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+:root {
+  --primary: #0f766e;
+  --primary-700: #0d5e58;
+  --accent: #f59e0b;
+  --warn: #dc2626;
+  --bg: #0b1020;
+  --surface: #0f172a;
+  --surface-2: #111827;
+  --text: #e5e7eb;
+  --muted: #9ca3af;
+}
+
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body { margin: 0; font-family: Inter, Roboto, "Helvetica Neue", sans-serif; background: var(--bg); color: var(--text); }
+
+a { color: var(--accent); text-decoration: none; }
+
+.mat-mdc-form-field-subscript-wrapper, .mat-mdc-form-field-hint-wrapper { color: var(--muted); }
+
+.mat-mdc-raised-button.mat-primary { background-color: var(--primary); }
+.mat-mdc-raised-button.mat-primary:hover { background-color: var(--primary-700); }
+
+.mdc-text-field--filled:not(.mdc-text-field--disabled) {
+  background-color: #0b1224;
+}
+
+.mat-toolbar { background: var(--surface); color: var(--text); }
+.mat-sidenav-container { background: var(--bg); }
+
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 24px;
+}
+
+.card {
+  background: var(--surface);
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 12px;
+  padding: 16px 20px;
+}
+
+:root {
+  --primary: #0f766e;
+  --primary-700: #0d5e58;
+  --accent: #f59e0b;
+  --warn: #dc2626;
+  --bg: #0b1020;
+  --surface: #0f172a;
+  --surface-2: #111827;
+  --text: #e5e7eb;
+  --muted: #9ca3af;
+}
+
+/* Base layout reset for full-screen system look */
+html, body, app-root { height: 100%; width: 100%; }
+body { margin: 0; padding: 0; }
+
+/* Remove any centralizing container constraints */
+.container { max-width: none !important; margin: 0 !important; padding: 0 !important; }
+
+/* Ensure Material container uses full viewport when appropriate */
+mat-sidenav-container { height: 100vh; width: 100vw; }
+mat-sidenav-content { height: 100%; }
+
+/* Avoid unintended padding in main content areas */
+main.content { padding: 0; }

@@ -1,0 +1,47 @@
+<div class="register-wrapper">
+  <mat-card class="card">
+    <h1>Cadastrar Usuário</h1>
+    <form [formGroup]="form" (ngSubmit)="onSubmit()">
+      <mat-form-field appearance="fill" class="full">
+        <mat-label>Nome</mat-label>
+        <input matInput type="text" formControlName="name" required />
+      </mat-form-field>
+
+      <mat-form-field appearance="fill" class="full">
+        <mat-label>Email</mat-label>
+        <input matInput type="email" formControlName="email" required />
+      </mat-form-field>
+
+      <mat-form-field appearance="fill" class="full">
+        <mat-label>Senha</mat-label>
+        <input matInput type="password" formControlName="password" required />
+      </mat-form-field>
+
+      <mat-form-field appearance="fill" class="full">
+        <mat-label>Perfil</mat-label>
+        <mat-select formControlName="profile" required>
+          <mat-option [value]="'ADMIN'">ADMIN</mat-option>
+          <mat-option [value]="'CONSULTOR'">CONSULTOR</mat-option>
+          <mat-option [value]="'CLIENTE'">CLIENTE</mat-option>
+        </mat-select>
+      </mat-form-field>
+
+      <mat-form-field appearance="fill" class="full">
+        <mat-label>Status</mat-label>
+        <mat-select formControlName="status" required>
+          <mat-option [value]="'ATIVO'">ATIVO</mat-option>
+          <mat-option [value]="'INATIVO'">INATIVO</mat-option>
+        </mat-select>
+      </mat-form-field>
+
+      <mat-form-field appearance="fill" class="full">
+        <mat-label>Empresa (companyId)</mat-label>
+        <input matInput type="text" formControlName="companyId" />
+      </mat-form-field>
+
+      <button mat-raised-button color="primary" class="full" [disabled]="form.invalid || loading()">Cadastrar</button>
+    </form>
+    <p class="hint error" *ngIf="error()">{{ error() }}</p>
+    <p class="hint" *ngIf="success()">Cadastro realizado com sucesso. Você já pode fazer login.</p>
+  </mat-card>
+</div>

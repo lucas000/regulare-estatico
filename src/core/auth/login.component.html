@@ -1,0 +1,17 @@
+<div class="login-wrapper">
+  <mat-card class="card">
+    <h1>Entrar</h1>
+    <form [formGroup]="form" (ngSubmit)="onSubmit()">
+      <mat-form-field appearance="fill" class="full">
+        <mat-label>Email</mat-label>
+        <input matInput type="email" formControlName="email" required />
+      </mat-form-field>
+      <mat-form-field appearance="fill" class="full">
+        <mat-label>Senha</mat-label>
+        <input matInput type="password" formControlName="password" required />
+      </mat-form-field>
+      <button mat-raised-button color="primary" class="full" [disabled]="form.invalid || loading()">Entrar</button>
+    </form>
+    <p class="hint" *ngIf="error()">{{ error() }}</p>
+  </mat-card>
+</div>

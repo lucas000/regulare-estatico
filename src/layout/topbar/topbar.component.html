@@ -1,0 +1,20 @@
+<mat-toolbar color="primary" class="topbar">
+  <button mat-icon-button (click)="toggle.emit()" aria-label="Toggle menu">
+    <mat-icon>menu</mat-icon>
+  </button>
+  <span class="brand">SYSMVN</span>
+
+  <span class="spacer"></span>
+
+  <mat-select class="company-select" placeholder="Empresa" disableOptionCentering>
+    <mat-option [value]="'default'">Empresa Padrão</mat-option>
+  </mat-select>
+
+  <button mat-button [matMenuTriggerFor]="userMenu">
+    <mat-icon>account_circle</mat-icon>
+    <span class="user-name">{{ (session.user() || {})?.name || 'Usuário' }}</span>
+  </button>
+  <mat-menu #userMenu="matMenu">
+    <button mat-menu-item (click)="logout()"><mat-icon>logout</mat-icon> Sair</button>
+  </mat-menu>
+</mat-toolbar>

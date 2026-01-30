@@ -1,0 +1,56 @@
+import { Injectable, Signal, computed, effect, inject, signal } from '@angular/core';
+import { Router } from '@angular/router';
+import { AuthService } from './auth.service';
+import { User } from '../models/user.model';
+import { UsersRepository } from './users.repository';
+import { map, of, switchMap } from 'rxjs';
+
+@Injectable({ providedIn: 'root' })
+export class SessionService {
+  private readonly auth = inject(AuthService);
+  private readonly usersRepo = inject(UsersRepository);
+  private readonly router = inject(Router);
+
+  private readonly _user = signal<User | null>(null);
+  readonly user: Signal<User | null> = this._user.asReadonly();
+
+  private readonly _loading = signal<boolean>(true);
+  readonly loading = this._loading.asReadonly();
+
+  constructor() {
+    // React to Firebase auth state changes
+    this.auth.authState$
+      .pipe(
+        switchMap((fb) => {
+          if (!fb) return of(null);
+          return this.usersRepo.doc$(fb.uid).pipe(
+            map((doc) => {
+              if (!doc) return null;
+              return { ...doc, id: fb.uid } satisfies User;
+            })
+          );
+        })
+      )
+      .subscribe({
+        next: (u) => {
+          this._user.set(u);
+          this._loading.set(false);
+        },
+        error: () => this._loading.set(false),
+      });
+  }
+
+  isAuthenticated(): boolean {
+    return !!this._user();
+  }
+
+  hasRole(roles: readonly User['profile'][]): boolean {
+    const u = this._user();
+    if (!u) return false;
+    return roles.includes(u.profile);
+  }
+
+  logout() {
+    return this.auth.logout().subscribe(() => this.router.navigateByUrl('/login'));
+  }
+}
