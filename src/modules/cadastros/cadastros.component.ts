@@ -1,17 +1,93 @@
-import { ChangeDetectionStrategy, Component } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, AfterViewInit, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatCardModule } from '@angular/material/card';
+import { MatTabsModule, MatTabGroup } from '@angular/material/tabs';
+import { CompaniesListComponent } from './companies/companies-list.component';
+import { UnitsListComponent } from './units/units-list.component';
+import { SessionService } from '../../core/services/session.service';
 
 @Component({
   selector: 'app-cadastros',
   standalone: true,
-  imports: [CommonModule, MatCardModule],
+  imports: [CommonModule, MatCardModule, MatTabsModule, CompaniesListComponent, UnitsListComponent],
   template: `
-    <mat-card>
-      <h2>Cadastros</h2>
-      <p>Gestão de cadastros base (empresas, unidades, cargos, EPIs, etc.).</p>
+    <mat-card class="card-full">
+      <mat-tab-group mat-stretch-tabs (selectedIndexChange)="onTabChange($event)">
+        <mat-tab *ngIf="canSee('EMPRESAS')" label="Empresas">
+          <app-companies-list></app-companies-list>
+        </mat-tab>
+        <mat-tab *ngIf="canSee('UNIDADES')" label="Unidades">
+          <app-units-list></app-units-list>
+        </mat-tab>
+        <mat-tab *ngIf="canSee('FUNCIONARIOS')" label="Funcionários">
+          <p>Em construção</p>
+        </mat-tab>
+        <mat-tab *ngIf="canSee('CARGOS')" label="Cargos">
+          <p>Em construção</p>
+        </mat-tab>
+        <mat-tab *ngIf="canSee('RISCOS')" label="Riscos">
+          <p>Em construção</p>
+        </mat-tab>
+        <mat-tab *ngIf="canSee('EPIS')" label="EPIs">
+          <p>Em construção</p>
+        </mat-tab>
+      </mat-tab-group>
     </mat-card>
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class CadastrosComponent {}
+export class CadastrosComponent implements AfterViewInit {
+  private readonly session = inject(SessionService);
+
+  @ViewChild(MatTabGroup) tabGroup!: MatTabGroup;
+  @ViewChild(CompaniesListComponent) companiesList?: CompaniesListComponent;
+  @ViewChild(UnitsListComponent) unitsList?: UnitsListComponent;
+
+  canSee(tab: 'EMPRESAS' | 'UNIDADES' | 'FUNCIONARIOS' | 'CARGOS' | 'RISCOS' | 'EPIS') {
+    // Respect rules: CLIENTE cannot access module at all; ADMIN sees all; CONSULTOR sees all except empresas
+    const isAdmin = this.session.hasRole(['ADMIN'] as any);
+    const isConsultor = this.session.hasRole(['CONSULTOR'] as any);
+    const isCliente = this.session.hasRole(['CLIENTE'] as any);
+    if (isCliente) return false;
+    if (tab === 'EMPRESAS') return isAdmin;
+    return isAdmin || isConsultor;
+  }
+
+  ngAfterViewInit(): void {
+    const tabsOrder: Array<'EMPRESAS' | 'UNIDADES' | 'FUNCIONARIOS' | 'CARGOS' | 'RISCOS' | 'EPIS'> = [
+      'EMPRESAS',
+      'UNIDADES',
+      'FUNCIONARIOS',
+      'CARGOS',
+      'RISCOS',
+      'EPIS',
+    ];
+
+    const visibleTabs = tabsOrder.filter(t => this.canSee(t));
+    const defaultIndex = visibleTabs.indexOf('EMPRESAS') >= 0 ? visibleTabs.indexOf('EMPRESAS') : 0;
+
+    // Set the selected tab index and trigger load for that tab
+    if (this.tabGroup) {
+      this.tabGroup.selectedIndex = defaultIndex;
+      // ensure initial tab's data is loaded
+      this.onTabChange(defaultIndex);
+    }
+  }
+
+  onTabChange(index: number): void {
+    // Determine which visible tab is at the provided index and call its load method
+    const tabsOrder: Array<'EMPRESAS' | 'UNIDADES' | 'FUNCIONARIOS' | 'CARGOS' | 'RISCOS' | 'EPIS'> = [
+      'EMPRESAS', 'UNIDADES', 'FUNCIONARIOS', 'CARGOS', 'RISCOS', 'EPIS'
+    ];
+    const visibleTabs = tabsOrder.filter(t => this.canSee(t));
+    const tab = visibleTabs[index];
+    if (!tab) return;
+
+    if (tab === 'EMPRESAS') {
+      this.companiesList?.load();
+    } else if (tab === 'UNIDADES') {
+      this.unitsList?.load();
+    }
+    // other tabs are placeholders; no action required
+  }
+}

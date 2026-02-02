@@ -21,4 +21,9 @@ export class TopbarComponent {
   readonly session = inject(SessionService);
 
   logout() { this.session.logout(); }
+
+  userName(): string {
+    const u = this.session.user();
+    return u?.name ?? 'Usuário';
+  }
 }

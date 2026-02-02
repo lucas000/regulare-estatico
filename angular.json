@@ -3,7 +3,7 @@
   "version": 1,
   "newProjectRoot": "projects",
   "projects": {
-    "sysmvn": {
+    "regulare-estatico": {
       "projectType": "application",
       "root": "",
       "sourceRoot": "src",
@@ -12,7 +12,7 @@
         "build": {
           "builder": "@angular-devkit/build-angular:browser",
           "options": {
-            "outputPath": "dist/sysmvn",
+            "outputPath": "dist/regulare-estatico",
             "index": "src/index.html",
             "main": "src/main.ts",
             "polyfills": [],
@@ -59,18 +59,18 @@
         "serve": {
           "builder": "@angular-devkit/build-angular:dev-server",
           "options": {
-            "browserTarget": "sysmvn:build"
+            "browserTarget": "regulare-estatico:build"
           },
           "configurations": {
             "production": {
-              "browserTarget": "sysmvn:build:production"
+              "browserTarget": "regulare-estatico:build:production"
             }
           }
         },
         "extract-i18n": {
           "builder": "@angular-devkit/build-angular:extract-i18n",
           "options": {
-            "browserTarget": "sysmvn:build"
+            "browserTarget": "regulare-estatico:build"
           }
         },
         "test": {
