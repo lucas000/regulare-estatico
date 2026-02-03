@@ -4,12 +4,13 @@ import { MatCardModule } from '@angular/material/card';
 import { MatTabsModule, MatTabGroup } from '@angular/material/tabs';
 import { CompaniesListComponent } from './companies/companies-list.component';
 import { UnitsListComponent } from './units/units-list.component';
+import { CargosListComponent } from './cargos/cargos-list.component';
 import { SessionService } from '../../core/services/session.service';
 
 @Component({
   selector: 'app-cadastros',
   standalone: true,
-  imports: [CommonModule, MatCardModule, MatTabsModule, CompaniesListComponent, UnitsListComponent],
+  imports: [CommonModule, MatCardModule, MatTabsModule, CompaniesListComponent, UnitsListComponent, CargosListComponent],
   template: `
     <mat-card class="card-full">
       <mat-tab-group mat-stretch-tabs (selectedIndexChange)="onTabChange($event)">
@@ -23,7 +24,7 @@ import { SessionService } from '../../core/services/session.service';
           <p>Em construção</p>
         </mat-tab>
         <mat-tab *ngIf="canSee('CARGOS')" label="Cargos">
-          <p>Em construção</p>
+          <app-cargos-list></app-cargos-list>
         </mat-tab>
         <mat-tab *ngIf="canSee('RISCOS')" label="Riscos">
           <p>Em construção</p>
@@ -42,6 +43,7 @@ export class CadastrosComponent implements AfterViewInit {
   @ViewChild(MatTabGroup) tabGroup!: MatTabGroup;
   @ViewChild(CompaniesListComponent) companiesList?: CompaniesListComponent;
   @ViewChild(UnitsListComponent) unitsList?: UnitsListComponent;
+  @ViewChild(CargosListComponent) cargosList?: CargosListComponent;
 
   canSee(tab: 'EMPRESAS' | 'UNIDADES' | 'FUNCIONARIOS' | 'CARGOS' | 'RISCOS' | 'EPIS') {
     // Respect rules: CLIENTE cannot access module at all; ADMIN sees all; CONSULTOR sees all except empresas
@@ -87,6 +89,8 @@ export class CadastrosComponent implements AfterViewInit {
       this.companiesList?.load();
     } else if (tab === 'UNIDADES') {
       this.unitsList?.load();
+    } else if (tab === 'CARGOS') {
+      this.cargosList?.load();
     }
     // other tabs are placeholders; no action required
   }

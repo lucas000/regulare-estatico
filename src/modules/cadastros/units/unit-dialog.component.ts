@@ -7,8 +7,10 @@ import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
 import { MatSelectModule } from '@angular/material/select';
 import { MatOptionModule } from '@angular/material/core';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { CompaniesRepository } from '../repositories/companies.repository';
 import { Company } from '../models/company.model';
+import { LocalidadesService, Estado, Municipio } from '../../../core/services/localidades.service';
 
 @Component({
   selector: 'app-unit-dialog',
@@ -22,6 +24,7 @@ import { Company } from '../models/company.model';
     MatDialogModule,
     MatSelectModule,
     MatOptionModule,
+    MatProgressSpinnerModule,
   ],
   template: `
     <h2 mat-dialog-title>Unidade</h2>
@@ -32,13 +35,28 @@ import { Company } from '../models/company.model';
       </mat-form-field>
 
       <mat-form-field appearance="fill" style="width:100%">
-        <mat-label>Cidade</mat-label>
-        <input matInput formControlName="cidade" />
+        <mat-label>Estado</mat-label>
+        <mat-select formControlName="estado">
+          <mat-option *ngFor="let estado of estados" [value]="estado.sigla">{{
+            estado.nome
+          }}</mat-option>
+        </mat-select>
+        <mat-error *ngIf="form.controls['estado']?.invalid"
+          >Estado é obrigatório</mat-error
+        >
       </mat-form-field>
 
       <mat-form-field appearance="fill" style="width:100%">
-        <mat-label>Estado</mat-label>
-        <input matInput formControlName="estado" />
+        <mat-label>Município</mat-label>
+        <mat-select formControlName="cidade" [disabled]="loadingMunicipios || !form.get('estado')?.value">
+          <mat-option *ngIf="loadingMunicipios" disabled>Carregando municípios...</mat-option>
+          <mat-option *ngFor="let municipio of municipios" [value]="municipio.nome">{{
+            municipio.nome
+          }}</mat-option>
+        </mat-select>
+        <mat-error *ngIf="form.controls['cidade']?.invalid"
+          >Cidade é obrigatória</mat-error
+        >
       </mat-form-field>
 
       <mat-form-field appearance="fill" style="width:100%">
@@ -52,6 +70,13 @@ import { Company } from '../models/company.model';
           >Empresa é obrigatória</mat-error
         >
       </mat-form-field>
+
+      <div *ngIf="loadingMunicipios" style="text-align: center; margin-top: 16px">
+        <mat-spinner diameter="24"></mat-spinner>
+      </div>
+      <div *ngIf="municipiosError" style="color: red; margin-top: 16px">
+        {{ municipiosError }}
+      </div>
     </mat-dialog-content>
 
     <mat-dialog-actions align="end">
@@ -65,17 +90,31 @@ export class UnitDialogComponent {
   form!: FormGroup;
   private readonly data = inject(MAT_DIALOG_DATA);
   private readonly companiesRepo = inject(CompaniesRepository);
+  private readonly localidades = inject(LocalidadesService);
   companies: Company[] = [];
+  estados: Estado[] = [];
+  municipios: Municipio[] = [];
+  loadingMunicipios = false;
+  municipiosError: string | null = null;
 
   constructor(private dialogRef: MatDialogRef<any>, private fb: FormBuilder) {
     this.form = this.fb.group({
       companyId: ['', [Validators.required]],
       nome: ['', [Validators.required]],
-      cidade: [''],
-      estado: [''],
+      cidade: ['', [Validators.required]],
+      estado: ['', [Validators.required]],
     });
     if (this.data) this.form.patchValue(this.data as any);
     this.loadCompanies();
+    this.loadEstados();
+    // react to estado change to load municipios
+    this.form.get('estado')?.valueChanges.subscribe((uf: string | null) => {
+      this.municipios = [];
+      this.form.patchValue({ cidade: '' });
+      this.municipiosError = null;
+      if (!uf) return;
+      this.loadMunicipios(uf);
+    });
   }
 
   private async loadCompanies() {
@@ -85,6 +124,43 @@ export class UnitDialogComponent {
     if (this.data && this.data.companyId) {
       this.form.patchValue({ companyId: (this.data as any).companyId });
     }
+  }
+
+  private loadEstados() {
+    this.localidades.getEstados().subscribe({
+      next: (list) => {
+        this.estados = list.sort((a, b) => a.nome.localeCompare(b.nome));
+        // If we are editing and an estado is already present in the form/data, load its municipios
+        const presetUf = this.form.get('estado')?.value as string | null;
+        if (presetUf) {
+          this.loadMunicipios(presetUf);
+        }
+      },
+      error: (err) => {
+        console.error('Erro carregando estados', err);
+      },
+    });
+  }
+
+  private loadMunicipios(uf: string) {
+    this.loadingMunicipios = true;
+    this.municipiosError = null;
+    this.localidades.getMunicipiosByUF(uf).subscribe({
+      next: (list) => {
+        this.municipios = list.sort((a, b) => a.nome.localeCompare(b.nome));
+        // If we are editing and a cidade was provided in the incoming data, preselect it
+        if (this.data && (this.data as any).cidade) {
+          // patch after municipios are available
+          this.form.patchValue({ cidade: (this.data as any).cidade });
+        }
+        this.loadingMunicipios = false;
+      },
+      error: (err) => {
+        console.error('Erro carregando municípios', err);
+        this.municipiosError = 'Erro ao carregar municípios';
+        this.loadingMunicipios = false;
+      },
+    });
   }
 
   save() {

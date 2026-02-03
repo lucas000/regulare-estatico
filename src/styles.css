@@ -43,24 +43,28 @@ a { color: var(--accent); text-decoration: none; }
   padding: 16px 20px;
 }
 
-:root {
-  --primary: #0f766e;
-  --primary-700: #0d5e58;
-  --accent: #f59e0b;
-  --warn: #dc2626;
-  --bg: #0b1020;
-  --surface: #0f172a;
-  --surface-2: #111827;
-  --text: #e5e7eb;
-  --muted: #9ca3af;
+/* Cadastros padding and spacing */
+.card-full{
+  padding: 16px;
+  box-sizing: border-box;
+}
+
+.card-full .mat-tab-group{
+  margin-top: 12px;
+}
+
+.cadastros-full{
+  width:100%;
+  padding: 12px;
+}
+
+.toolbar-row input[matInput]{
+  vertical-align: middle;
 }
 
 /* Base layout reset for full-screen system look */
 html, body, app-root { height: 100%; width: 100%; }
 body { margin: 0; padding: 0; }
-
-/* Remove any centralizing container constraints */
-.container { max-width: none !important; margin: 0 !important; padding: 0 !important; }
 
 /* Ensure Material container uses full viewport when appropriate */
 mat-sidenav-container { height: 100vh; width: 100vw; }
@@ -68,3 +72,26 @@ mat-sidenav-content { height: 100%; }
 
 /* Avoid unintended padding in main content areas */
 main.content { padding: 0; }
+
+/* Status badge styles (reusable) */
+.status-badge {
+  display: inline-block;
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-weight: 600;
+  font-size: 12px;
+  line-height: 1;
+  text-transform: capitalize;
+}
+.status-ativo {
+  background-color: #16a34a; /* green-600 */
+  color: #ffffff;
+  box-shadow: 0 1px 0 rgba(0,0,0,0.06);
+}
+.status-inativo {
+  background-color: #e6e6e6; /* light gray */
+  color: #374151; /* gray-700 */
+}
+
+/* small helper to align badge in table cells */
+.status-cell { display:flex; align-items:center; gap:8px; }

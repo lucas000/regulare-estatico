@@ -61,6 +61,10 @@ export class UnitsService {
     return this.repo.getById(id);
   }
 
+  async listUnitsPaged(term: string, pageSize: number, startAfterDoc?: any) {
+    return this.repo.listByNamePaged(term, pageSize, startAfterDoc);
+  }
+
   private getUid(): string {
     const u = (this.session as any).user?.();
     return u?.id ?? '';

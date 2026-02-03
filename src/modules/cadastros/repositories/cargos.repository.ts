@@ -1,43 +1,37 @@
 import { Injectable } from '@angular/core';
-import { Unit } from '../models/unit.model';
+import { Cargo } from '../models/cargo.model';
 import { BaseFirestoreService } from '../../../core/services/base-firestore.service';
 import { getDocs, query, limit, orderBy, where, startAfter } from '@angular/fire/firestore';
 
 @Injectable({ providedIn: 'root' })
-export class UnitsRepository extends BaseFirestoreService<Unit> {
-  protected override collectionPath = 'units';
+export class CargosRepository extends BaseFirestoreService<Cargo> {
+  protected override collectionPath = 'cargos';
 
-  async listAll(max = 200): Promise<Unit[]> {
-    const q = query(this.colRef(), limit(max));
-    const sn = await getDocs(q as any);
-    return sn.docs.map(d => d.data() as Unit);
+  async create(item: Cargo): Promise<void> {
+    return this.set(item);
   }
 
-  async create(unit: Unit): Promise<void> {
-    await this.set(unit);
+  async updateCargo(id: string, partial: Partial<Cargo>) {
+    return this.update(id, partial as Partial<Cargo>);
   }
 
-  async updateUnit(id: string, partial: Partial<Unit>): Promise<void> {
-    await this.update(id, partial as Partial<Unit>);
-  }
-
-  async getById(id: string): Promise<Unit | null> {
+  async getById(id: string) {
     return this.get(id);
   }
 
-  async deleteUnit(id: string): Promise<void> {
+  async deleteCargo(id: string) {
     return this.delete(id);
   }
 
-  // Paged listing by name with optional startAfter document
   async listByNamePaged(term: string, pageSize: number, startAfterDoc?: any) {
     const col = this.colRef();
     const constraints: any[] = [];
-    constraints.push(orderBy('nome'));
+    constraints.push(orderBy('name'));
     if (term && term.trim().length) {
       const t = term.trim();
-      constraints.push(where('nome', '>=', t));
-      constraints.push(where('nome', '<=', t + '\uf8ff'));
+      // search by name prefix OR cbo prefix: Firestore requires separate queries; we'll implement name prefix
+      constraints.push(where('name', '>=', t));
+      constraints.push(where('name', '<=', t + '\uf8ff'));
     }
     constraints.push(limit(pageSize));
     if (startAfterDoc) constraints.push(startAfter(startAfterDoc));
@@ -46,5 +40,11 @@ export class UnitsRepository extends BaseFirestoreService<Unit> {
     const docs = snap.docs.map(d => d.data());
     const lastDoc = snap.docs[snap.docs.length - 1] ?? null;
     return { docs, lastDoc };
+  }
+
+  async findByCbo(cbo: string) {
+    const q = query(this.colRef(), where('cbo', '==', cbo), limit(1));
+    const sn = await getDocs(q as any);
+    return sn.docs.map(d => d.data() as Cargo)[0] ?? null;
   }
 }

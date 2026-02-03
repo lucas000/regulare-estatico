@@ -55,7 +55,7 @@ export class CompaniesService {
     try {
       tempApp = firebaseInitApp(environment.firebase as any, tempAppName);
       const tempAuth = getFirebaseAuth(tempApp);
-      const password = input.password ?? DEFAULT_PASSWORD;
+      const password = (input.password && input.password.trim().length > 0) ? input.password : DEFAULT_PASSWORD;
       const cred = await firebaseCreateUser(tempAuth, input.email, password);
       createdUserUid = cred.user.uid;
 
@@ -142,6 +142,10 @@ export class CompaniesService {
 
   async getCompany(id: string): Promise<Company | null> {
     return this.repo.getById(id);
+  }
+
+  async listCompaniesPaged(term: string, pageSize: number, startAfterDoc?: any) {
+    return this.repo.listByNamePaged(term, pageSize, startAfterDoc);
   }
 
   private getUid(): string {

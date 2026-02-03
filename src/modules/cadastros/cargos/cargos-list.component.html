@@ -1,0 +1,51 @@
+<div class="cadastros-full">
+  <div class="toolbar-row" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+    <div style="flex:1;display:flex;align-items:center;gap:8px;">
+      <mat-form-field appearance="outline" style="width:100%;max-width:360px;">
+        <input matInput placeholder="Buscar por nome ou CBO" [formControl]="searchControl" (keyup.enter)="search()" />
+      </mat-form-field>
+      <button mat-button (click)="search()">Buscar</button>
+      <input type="file" #fileInput accept=".csv,text/csv" style="display:none" (change)="handleFile($any($event.target).files && $any($event.target).files[0])" />
+      <button mat-stroked-button color="accent" style="margin-left:8px" (click)="fileInput.click()" [disabled]="importing">Importar CBO (CSV)</button>
+    </div>
+    <div>
+      <button mat-flat-button color="primary" (click)="newCargo()">Novo Cargo</button>
+    </div>
+  </div>
+
+  <mat-progress-bar *ngIf="loading" mode="indeterminate"></mat-progress-bar>
+
+  <table mat-table [dataSource]="dataSource" class="mat-elevation-z8" style="width:100%">
+    <ng-container matColumnDef="name">
+      <th mat-header-cell *matHeaderCellDef> Nome </th>
+      <td mat-cell *matCellDef="let c"> {{c.name}} </td>
+    </ng-container>
+
+    <ng-container matColumnDef="cbo">
+      <th mat-header-cell *matHeaderCellDef> CBO </th>
+      <td mat-cell *matCellDef="let c"> {{c.cbo}} </td>
+    </ng-container>
+
+    <ng-container matColumnDef="status">
+      <th mat-header-cell *matHeaderCellDef> Status </th>
+      <td mat-cell *matCellDef="let c">
+        <div class="status-cell">
+          <span [ngClass]="{'status-badge': true, 'status-ativo': c.status==='ativo', 'status-inativo': c.status!=='ativo'}">{{c.status==='ativo'?'Ativa':'Inativa'}}</span>
+        </div>
+      </td>
+    </ng-container>
+
+    <ng-container matColumnDef="acoes">
+      <th mat-header-cell *matHeaderCellDef> Ações </th>
+      <td mat-cell *matCellDef="let c">
+        <button mat-icon-button (click)="editCargo(c)"><mat-icon>edit</mat-icon></button>
+        <button mat-icon-button (click)="toggleActive(c)"><mat-icon>{{c.status==='ativo'?'toggle_on':'toggle_off'}}</mat-icon></button>
+      </td>
+    </ng-container>
+
+    <tr mat-header-row *matHeaderRowDef="columns"></tr>
+    <tr mat-row *matRowDef="let row; columns: columns"></tr>
+  </table>
+
+  <mat-paginator [pageSize]="pageSize" [pageSizeOptions]="[30]" [length]="total" (page)="onPage($event)"></mat-paginator>
+</div>
