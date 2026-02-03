@@ -1,5 +1,22 @@
-.topbar { position: sticky; top: 0; z-index: 1000; }
+.topbar { position: sticky; top: 0; z-index: 1000; padding: 0 12px; display:flex; align-items:center; height:64px; }
 .brand { font-weight: 600; margin-left: 8px; }
 .spacer { flex: 1 1 auto; }
-.user-name { margin-left: 6px; }
-.company-select { min-width: 220px; margin-right: 12px; }
+.user-name { margin-left: 8px; font-weight:500 }
+.company-select { min-width: 220px; margin-right: 12px; color: var(--color-bg) }
+mat-toolbar { background-color: var(--color-primary); color: var(--color-bg) }
+
+/* accent color for icons */
+:host { color: var(--color-bg);}
+.icon-accent { color: var(--color-bg); }
+
+.title-area { display:flex; align-items:center; gap:8px; margin-left:12px; }
+.title-icon { opacity:0.85 }
+.title-text { font-size:1.125rem; font-weight:600 }
+
+.topbar-actions { display:flex; align-items:center; gap:8px }
+
+.status-badge { padding: 4px 8px; border-radius: 8px; font-weight: 600; }
+.status-ativo { background: #1b8e3a; color: white; }
+.status-inativo { background: #e0e0e0; color: #555; }
+
+.company-name { font-size: 12px}

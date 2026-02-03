@@ -4,9 +4,9 @@
       <mat-form-field appearance="outline" style="width:100%;max-width:360px;">
         <input matInput placeholder="Buscar por nome ou CBO" [formControl]="searchControl" (keyup.enter)="search()" />
       </mat-form-field>
-      <button mat-button (click)="search()">Buscar</button>
-      <input type="file" #fileInput accept=".csv,text/csv" style="display:none" (change)="handleFile($any($event.target).files && $any($event.target).files[0])" />
-      <button mat-stroked-button color="accent" style="margin-left:8px" (click)="fileInput.click()" [disabled]="importing">Importar CBO (CSV)</button>
+<!--      <button mat-button (click)="search()">Buscar</button>-->
+<!--      <input type="file" #fileInput accept=".csv,text/csv" style="display:none" (change)="handleFile($any($event.target).files && $any($event.target).files[0])" />-->
+<!--      <button mat-stroked-button color="accent" style="margin-left:8px" (click)="fileInput.click()" [disabled]="importing">Importar CBO (CSV)</button>-->
     </div>
     <div>
       <button mat-flat-button color="primary" (click)="newCargo()">Novo Cargo</button>

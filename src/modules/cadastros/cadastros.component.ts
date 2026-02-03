@@ -21,7 +21,9 @@ import { SessionService } from '../../core/services/session.service';
           <app-units-list></app-units-list>
         </mat-tab>
         <mat-tab *ngIf="canSee('FUNCIONARIOS')" label="Funcionários">
-          <p>Em construção</p>
+          <ng-container *ngIf="employeesCompPromise | async as employeesComp">
+            <ng-container *ngComponentOutlet="employeesComp"></ng-container>
+          </ng-container>
         </mat-tab>
         <mat-tab *ngIf="canSee('CARGOS')" label="Cargos">
           <app-cargos-list></app-cargos-list>
@@ -45,6 +47,8 @@ export class CadastrosComponent implements AfterViewInit {
   @ViewChild(UnitsListComponent) unitsList?: UnitsListComponent;
   @ViewChild(CargosListComponent) cargosList?: CargosListComponent;
 
+  employeesCompPromise: Promise<any> | null = null;
+
   canSee(tab: 'EMPRESAS' | 'UNIDADES' | 'FUNCIONARIOS' | 'CARGOS' | 'RISCOS' | 'EPIS') {
     // Respect rules: CLIENTE cannot access module at all; ADMIN sees all; CONSULTOR sees all except empresas
     const isAdmin = this.session.hasRole(['ADMIN'] as any);
@@ -52,6 +56,8 @@ export class CadastrosComponent implements AfterViewInit {
     const isCliente = this.session.hasRole(['CLIENTE'] as any);
     if (isCliente) return false;
     if (tab === 'EMPRESAS') return isAdmin;
+    // Funcionários: remove per-tab role restriction — available whenever the module is accessible (i.e., not CLIENTE)
+    if (tab === 'FUNCIONARIOS') return true;
     return isAdmin || isConsultor;
   }
 
@@ -71,6 +77,11 @@ export class CadastrosComponent implements AfterViewInit {
     // Set the selected tab index and trigger load for that tab
     if (this.tabGroup) {
       this.tabGroup.selectedIndex = defaultIndex;
+      // pre-load employees component if default is FUNCIONARIOS
+      const visibleTabsOrder = visibleTabs;
+      if (visibleTabsOrder[defaultIndex] === 'FUNCIONARIOS') {
+        this.employeesCompPromise = import('./funcionarios/employees-list.component').then(m => m.EmployeesListComponent);
+      }
       // ensure initial tab's data is loaded
       this.onTabChange(defaultIndex);
     }
@@ -91,6 +102,9 @@ export class CadastrosComponent implements AfterViewInit {
       this.unitsList?.load();
     } else if (tab === 'CARGOS') {
       this.cargosList?.load();
+    } else if (tab === 'FUNCIONARIOS') {
+      // dynamically import the employees component module and set promise so template can render
+      this.employeesCompPromise = import('./funcionarios/employees-list.component').then(m => m.EmployeesListComponent);
     }
     // other tabs are placeholders; no action required
   }

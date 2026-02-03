@@ -42,9 +42,43 @@ export class CargosRepository extends BaseFirestoreService<Cargo> {
     return { docs, lastDoc };
   }
 
+  // Search cargos by name prefix OR CBO prefix. Merges results and limits to `max`.
+  async searchByNameOrCbo(term: string, max = 20): Promise<Cargo[]> {
+    const t = (term || '').trim();
+    if (!t) return [];
+
+    const col = this.colRef();
+
+    // Query by name prefix
+    const nameConstraints: any[] = [orderBy('name'), where('name', '>=', t), where('name', '<=', t + '\uf8ff'), limit(max)];
+    const qName = query(col, ...nameConstraints);
+    const snName = await getDocs(qName as any);
+    const byName = snName.docs.map((d) => d.data() as Cargo);
+
+    // Query by CBO prefix (assuming CBO stored as string)
+    const cboConstraints: any[] = [orderBy('cbo'), where('cbo', '>=', t), where('cbo', '<=', t + '\uf8ff'), limit(max)];
+    const qCbo = query(col, ...cboConstraints);
+    const snCbo = await getDocs(qCbo as any);
+    const byCbo = snCbo.docs.map((d) => d.data() as Cargo);
+
+    // Merge unique by id, keeping order: name results first, then CBOs
+    const map = new Map<string, Cargo>();
+    for (const c of [...byName, ...byCbo]) {
+      if (!map.has(c.id)) map.set(c.id, c);
+      if (map.size >= max) break;
+    }
+    return Array.from(map.values());
+  }
+
   async findByCbo(cbo: string) {
     const q = query(this.colRef(), where('cbo', '==', cbo), limit(1));
     const sn = await getDocs(q as any);
     return sn.docs.map(d => d.data() as Cargo)[0] ?? null;
+  }
+
+  async listAll(max = 200): Promise<Cargo[]> {
+    const q = query(this.colRef(), limit(max));
+    const sn = await getDocs(q as any);
+    return sn.docs.map(d => d.data() as Cargo);
   }
 }

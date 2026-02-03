@@ -10,6 +10,25 @@
   --surface-2: #111827;
   --text: #e5e7eb;
   --muted: #9ca3af;
+  /* Cores institucionais */
+  --color-primary: #1E4FA3;
+  --color-accent: #C62828;
+  --color-warn: #E53935;
+
+  /* Destaques */
+  --color-gold: #F2B705;
+
+  /* Neutros */
+  --color-bg: #F4F6F8;
+  --color-text: #1F2937;
+  --color-muted: #6B7280;
+
+  /* Status */
+  --status-active-bg: #2E7D32;
+  --status-active-text: #FFFFFF;
+
+  --status-inactive-bg: #B0BEC5;
+  --status-inactive-text: #263238;
 }
 
 * { box-sizing: border-box; }
@@ -31,9 +50,12 @@ a { color: var(--accent); text-decoration: none; }
 .mat-sidenav-container { background: var(--bg); }
 
 .container {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 24px;
+  /* Make .container fluid to avoid nested centered containers. Use .page-container as single central container. */
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
 }
 
 .card {
@@ -64,7 +86,6 @@ a { color: var(--accent); text-decoration: none; }
 
 /* Base layout reset for full-screen system look */
 html, body, app-root { height: 100%; width: 100%; }
-body { margin: 0; padding: 0; }
 
 /* Ensure Material container uses full viewport when appropriate */
 mat-sidenav-container { height: 100vh; width: 100vw; }
@@ -95,3 +116,36 @@ main.content { padding: 0; }
 
 /* small helper to align badge in table cells */
 .status-cell { display:flex; align-items:center; gap:8px; }
+
+/* Page layout standardization (global) */
+.page-container {
+  /* responsive page container: centers content and caps width to avoid huge empty sides on widescreens */
+  width: 100%;
+  padding: 18px;
+  box-sizing: border-box;
+  margin: 0 auto;
+}
+
+.page-title {
+  margin: 0 0 8px 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.page-subtitle {
+  margin: 0 0 24px 0;
+  color: var(--color-muted);
+  font-size: 0.95rem;
+}
+
+.page-content {
+  margin-top: 16px;
+}
+
+/* Map existing headings inside page-container to our standard classes */
+.page-container h1 { margin: 0 0 8px 0; font-size: 1.25rem; font-weight: 600; color: var(--color-text); }
+.page-container h2 { margin: 0 0 8px 0; font-size: 1.1rem; font-weight: 600; color: var(--color-text); }
+.page-container p.lead, .page-container .subtitle { margin: 0 0 24px 0; color: var(--color-muted); }
+
+/* end of page layout standardization */

@@ -1,54 +1,56 @@
-import { Routes } from '@angular/router';
-import { AuthGuard } from './core/guards/auth.guard';
-import { RoleGuard } from './core/guards/role.guard';
+import {Routes} from '@angular/router';
+import {AuthGuard} from './core/guards/auth.guard';
+import {RoleGuard} from './core/guards/role.guard';
 
 export const routes: Routes = [
-  { path: '', pathMatch: 'full', redirectTo: '/login' },
-  {
-    path: 'login',
-    loadComponent: () => import('./core/auth/login.component').then(m => m.LoginComponent)
-  },
-  {
-    path: 'register',
-    loadComponent: () => import('./core/auth/register.component').then(m => m.RegisterComponent)
-  },
-  {
-    path: 'app',
-    canActivate: [AuthGuard],
-    loadComponent: () => import('./layout/shell/shell.component').then(m => m.ShellComponent),
-    children: [
-      { path: '', pathMatch: 'full', redirectTo: 'dashboard' },
-      {
-        path: 'dashboard',
-        loadChildren: () => import('./modules/dashboard/dashboard.routes').then(m => m.routes)
-      },
-      {
-        path: 'licencas',
-        loadChildren: () => import('./modules/licencas/licencas.routes').then(m => m.routes)
-      },
-      {
-        path: 'condicionantes',
-        loadChildren: () => import('./modules/condicionantes/condicionantes.routes').then(m => m.routes)
-      },
-      {
-        path: 'epis',
-        loadChildren: () => import('./modules/epis/epis.routes').then(m => m.routes)
-      },
-      {
-        path: 'alertas',
-        loadChildren: () => import('./modules/alertas/alertas.routes').then(m => m.routes)
-      },
-      {
-        path: 'cadastros',
-        loadChildren: () => import('./modules/cadastros/cadastros.routes').then(m => m.routes)
-      },
-      {
-        path: 'usuarios',
-        canActivate: [RoleGuard],
-        data: { roles: ['ADMIN', 'CONSULTOR'] as const },
-        loadChildren: () => import('./modules/usuarios/usuarios.routes').then(m => m.routes)
-      },
-    ]
-  },
-  { path: '**', redirectTo: '/login' },
+    {path: '', pathMatch: 'full', redirectTo: '/login'},
+    {
+        path: 'login',
+        loadComponent: () => import('./core/auth/login.component').then(m => m.LoginComponent)
+    },
+    {
+        path: 'register',
+        loadComponent: () => import('./core/auth/register.component').then(m => m.RegisterComponent)
+    },
+    {
+        path: 'app',
+        canActivate: [AuthGuard],
+        loadComponent: () => import('./layout/shell/shell.component').then(m => m.ShellComponent),
+        children: [
+            {path: '', pathMatch: 'full', redirectTo: 'dashboard'},
+            {
+                path: 'dashboard',
+                loadChildren: () => import('./modules/dashboard/dashboard.routes').then(m => m.routes)
+            },
+            {
+                path: 'licencas',
+                loadChildren: () => import('./modules/licencas/licencas.routes').then(m => m.routes)
+            },
+            {
+                path: 'condicionantes',
+                loadChildren: () => import('./modules/condicionantes/condicionantes.routes').then(m => m.routes)
+            },
+            {
+                path: 'epis',
+                loadChildren: () => import('./modules/epis/epis.routes').then(m => m.routes)
+            },
+            {
+                path: 'alertas',
+                loadChildren: () => import('./modules/alertas/alertas.routes').then(m => m.routes)
+            },
+            {
+                path: 'cadastros',
+                canActivate: [RoleGuard],
+                data: {roles: ['ADMIN'] as const},
+                loadChildren: () => import('./modules/cadastros/cadastros.routes').then(m => m.routes)
+            },
+            {
+                path: 'usuarios',
+                canActivate: [RoleGuard],
+                data: {roles: ['ADMIN'] as const},
+                loadChildren: () => import('./modules/usuarios/usuarios.routes').then(m => m.routes)
+            },
+        ]
+    },
+    {path: '**', redirectTo: '/login'},
 ];

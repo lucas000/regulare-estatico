@@ -1,5 +1,7 @@
-.login-wrapper { height: 100vh; display: grid; place-items: center; padding: 16px; }
+.login-wrapper { height: 100vh; display: grid; place-items: center; padding: 16px; background-image: url('assets/images/imagem-fundo-login2.png'); background-position: center center; background-repeat: no-repeat; background-size: cover; background-attachment: fixed; }
 .card { width: 100%; max-width: 380px; }
 .full { width: 100%; }
 h1 { margin-top: 0; }
 .hint { color: #fca5a5; }
+
+.card .logo { display: block; margin: 8px auto 16px; width: 60%; max-width: 220px; height: auto; }

@@ -1,20 +1,33 @@
-<mat-toolbar color="primary" class="topbar">
+<mat-toolbar class="topbar">
   <button mat-icon-button (click)="toggle.emit()" aria-label="Toggle menu">
-    <mat-icon>menu</mat-icon>
+    <mat-icon class="icon-accent">menu</mat-icon>
   </button>
-  <span class="brand">SYSMVN</span>
+
+  <div class="title-area">
+    <mat-icon class="title-icon">chevron_right</mat-icon>
+    <span class="title-text" *ngIf="title$ | async as title">{{ title }}</span>
+  </div>
 
   <span class="spacer"></span>
 
-  <mat-select class="company-select" placeholder="Empresa" disableOptionCentering>
-    <mat-option [value]="'default'">Empresa Padrão</mat-option>
-  </mat-select>
+  <div class="topbar-actions">
+    <button mat-icon-button [matBadge]="notificationsCount" [matBadgeHidden]="notificationsCount===0" matBadgeColor="accent" aria-label="Notificações">
+      <mat-icon class="icon-accent">notifications</mat-icon>
+    </button>
 
-  <button mat-button [matMenuTriggerFor]="userMenu">
-    <mat-icon>account_circle</mat-icon>
-    <span class="user-name">{{ userName() }}</span>
-  </button>
-  <mat-menu #userMenu="matMenu">
-    <button mat-menu-item (click)="logout()"><mat-icon>logout</mat-icon> Sair</button>
-  </mat-menu>
+    <button mat-icon-button [matBadge]="alertsCount" [matBadgeHidden]="alertsCount===0" matBadgeColor="warn" aria-label="Alertas">
+      <mat-icon class="icon-accent">warning</mat-icon>
+    </button>
+
+    <!-- Company name (from logged user context) -->
+    <span class="company-name">{{ companyName() }}</span>
+
+    <!-- User icon only opens the menu -->
+    <button mat-icon-button [matMenuTriggerFor]="userMenu" aria-label="Abrir menu do usuário">
+      <mat-icon>account_circle</mat-icon>
+    </button>
+    <mat-menu #userMenu="matMenu">
+      <button mat-menu-item (click)="logout()"><mat-icon>logout</mat-icon> Sair</button>
+    </mat-menu>
+  </div>
 </mat-toolbar>
