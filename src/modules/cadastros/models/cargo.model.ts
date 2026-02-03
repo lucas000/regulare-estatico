@@ -7,8 +7,8 @@ export interface Cargo {
   description?: string;
   notes?: string;
   status?: 'ativo' | 'inativo';
-  criadoEm: string;
-  atualizadoEm?: string;
-  criadoPor: AuditUser;
-  atualizadoPor?: AuditUser;
+  createdAt: string;
+  updatedAt?: string;
+  createdBy: AuditUser;
+  updatedBy?: AuditUser;
 }

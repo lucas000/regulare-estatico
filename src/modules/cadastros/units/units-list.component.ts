@@ -30,7 +30,7 @@ export class UnitsListComponent implements OnInit, OnDestroy {
   private readonly cd = inject(ChangeDetectorRef);
   private readonly snack = inject(MatSnackBar);
 
-  columns = ['nome', 'cidade', 'estado', 'status', 'acoes'];
+  columns = ['name', 'city', 'state', 'status', 'acoes'];
   units: Unit[] = [];
   dataSource: MatTableDataSource<Unit>;
 

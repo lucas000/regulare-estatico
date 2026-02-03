@@ -6,7 +6,7 @@
       </mat-form-field>
 <!--      <button mat-button (click)="search()" style="margin-left:8px">Buscar</button>-->
 <!--      &lt;!&ndash; Dev-only generator button &ndash;&gt;-->
-<!--      <button mat-stroked-button color="accent" style="margin-left:8px" (click)="generateTestData()" [disabled]="generatingTestData">Gerar Empresas (Teste)</button>-->
+      <button mat-stroked-button color="accent" style="margin-left:8px" (click)="generateTestData()" [disabled]="generatingTestData">Gerar Empresas (Teste)</button>
     </div>
     <div>
       <button mat-flat-button color="primary" (click)="newCompany()">Nova Empresa</button>
@@ -16,10 +16,10 @@
   <mat-progress-bar *ngIf="loading" mode="indeterminate"></mat-progress-bar>
 
   <table mat-table [dataSource]="dataSource" class="mat-elevation-z8" style="width:100%">
-    <!-- Nome Column -->
-    <ng-container matColumnDef="nome">
+    <!-- Name Column -->
+    <ng-container matColumnDef="name">
       <th mat-header-cell *matHeaderCellDef> Nome </th>
-      <td mat-cell *matCellDef="let element"> {{element.nome}} </td>
+      <td mat-cell *matCellDef="let element"> {{element.name}} </td>
     </ng-container>
 
     <!-- CNPJ Column -->

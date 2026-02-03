@@ -33,18 +33,18 @@ export class CompaniesService {
 
     const loggedUid = this.getUid();
     const loggedUser = await this.usersRepo.get(loggedUid);
-    const criadoPor = { uid: loggedUid, nome: loggedUser?.name ?? '', email: loggedUser?.email ?? '' };
+    const createdBy = { uid: loggedUid, name: loggedUser?.name ?? '', email: loggedUser?.email ?? '' };
 
     // Prepare company doc
     const company: Company = {
       id,
-      nome: input.nome ?? '',
+      name: input.name ??  '',
       email: input.email,
       cnpj: input.cnpj ?? '',
       status: 'ativo',
-      criadoEm: now,
-      atualizadoEm: now,
-      criadoPor,
+      createdAt: now,
+      updatedAt: now,
+      createdBy,
     };
 
     // Create Auth user using a temporary secondary app to avoid touching current session
@@ -62,7 +62,7 @@ export class CompaniesService {
       // Persist user document in /users
       const userDoc = {
         id: createdUserUid,
-        name: company.nome,
+        name: company.name,
         email: input.email,
         profile: 'CLIENTE' as const,
         companyId: id,
@@ -106,18 +106,18 @@ export class CompaniesService {
   async createCompany(input: Partial<Company>): Promise<string> {
     const uid = this.getUid();
     const user = await this.usersRepo.get(uid);
-    const audit: AuditUser = { uid, nome: user?.name ?? '', email: user?.email ?? '' };
+    const audit: AuditUser = { uid, name: user?.name ?? '', email: user?.email ?? '' };
     const now = new Date().toISOString();
     const id = `comp_${makeId()}`;
     const doc: Company = {
       id,
-      nome: input.nome ?? '',
+      name: input.name ??  '',
       email: input.email ?? '',
       cnpj: input.cnpj ?? '',
       status: 'ativo',
-      criadoEm: now,
-      atualizadoEm: now,
-      criadoPor: audit,
+      createdAt: now,
+      updatedAt: now,
+      createdBy: audit,
     };
     await this.repo.create(doc);
     return id;
@@ -125,11 +125,11 @@ export class CompaniesService {
 
   async updateCompany(id: string, patch: Partial<Company>): Promise<void> {
     const now = new Date().toISOString();
-    // Do not allow overwriting criadoPor/criadoEm
+    // Do not allow overwriting createdBy/createdAt
     const uid = this.getUid();
     const user = await this.usersRepo.get(uid);
-    const atualizadoPor: AuditUser = { uid, nome: user?.name ?? '', email: user?.email ?? '' };
-    await this.repo.updateCompany(id, { ...patch, atualizadoEm: now, atualizadoPor } as Partial<Company>);
+    const updatedBy: AuditUser = { uid, name: user?.name ?? '', email: user?.email ?? '' };
+    await this.repo.updateCompany(id, { ...patch, updatedAt: now, updatedBy } as Partial<Company>);
   }
 
   async setActive(id: string, ativo: boolean): Promise<void> {

@@ -19,7 +19,7 @@ export class CompanyDialogComponent {
 
   constructor(private dialogRef: MatDialogRef<any>, private fb: FormBuilder) {
     this.form = this.fb.group({
-      nome: ['', [Validators.required]],
+      name: ['', [Validators.required]],
       cnpj: [''],
       email: ['', [Validators.required, Validators.email]],
       password: [''],

@@ -39,7 +39,7 @@ export class CompaniesListComponent implements OnInit, OnDestroy {
   private readonly usersRepo = inject(UsersRepository);
   private readonly snack = inject(MatSnackBar);
 
-  columns = ['nome', 'cnpj', 'status', 'acoes'];
+  columns = ['name', 'cnpj', 'status', 'acoes'];
   companies: Company[] = [];
   dataSource: MatTableDataSource<Company>;
 
@@ -205,13 +205,13 @@ export class CompaniesListComponent implements OnInit, OnDestroy {
       const sessUser = (this.session as any).user?.();
       const loggedUid = sessUser?.id ?? 'system';
       const loggedUserDoc = await this.usersRepo.get(loggedUid);
-      const criadoPor = { uid: loggedUid, nome: loggedUserDoc?.name ?? 'Sistema', email: loggedUserDoc?.email ?? 'system@local' };
+      const createdBy = { uid: loggedUid, name: loggedUserDoc?.name ?? 'Sistema', email: loggedUserDoc?.email ?? 'system@local' };
 
       const now = new Date().toISOString();
 
       // Detect existing test companies and units to make the generator resumable
       const existingCompanies: any[] = await this.companiesRepo.listAll(1000);
-      const testCompanies = existingCompanies.filter(c => typeof c.id === 'string' && /^comp_\d{3}$/.test(c.id) && typeof c.nome === 'string' && c.nome.startsWith('Empresa Teste'));
+      const testCompanies = existingCompanies.filter(c => typeof c.id === 'string' && /^comp_\d{3}$/.test(c.id) && typeof c.name === 'string' && c.name.startsWith('Empresa Teste'));
       const existingCompanyIndexes = testCompanies.map(c => parseInt(c.id.replace('comp_', ''), 10)).filter(n => !isNaN(n));
       const maxExistingCompanyIdx = existingCompanyIndexes.length ? Math.max(...existingCompanyIndexes) : 0;
 
@@ -225,7 +225,7 @@ export class CompaniesListComponent implements OnInit, OnDestroy {
       let unitCounter = unitIdNums.length ? Math.max(...unitIdNums) + 1 : 1;
 
       const startIdx = maxExistingCompanyIdx + 1;
-      for (let i = startIdx; i <= 100; i++) {
+      for (let i = startIdx; i <= 10; i++) {
         const idx = String(i).padStart(3, '0');
         const compId = `comp_${idx}`;
 
@@ -234,13 +234,13 @@ export class CompaniesListComponent implements OnInit, OnDestroy {
         if (!exists) {
           const company: any = {
             id: compId,
-            nome: `Empresa Teste ${idx}`,
+            name: `Empresa Teste ${idx}`,
             email: `teste${idx}@example.com`,
             cnpj: `00.000.000/000${idx}`,
             status: 'ativo',
-            criadoEm: now,
-            atualizadoEm: now,
-            criadoPor,
+            createdAt: now,
+            updatedAt: now,
+            createdBy,
           };
           await this.companiesRepo.create(company);
         }
@@ -248,19 +248,19 @@ export class CompaniesListComponent implements OnInit, OnDestroy {
         // Ensure this company has 15 units; create missing ones
         const unitsForCompany: any[] = await this.unitsRepo.listBy('companyId' as any, compId, 1000);
         const existingCount = Array.isArray(unitsForCompany) ? unitsForCompany.length : 0;
-        for (let u = existingCount + 1; u <= 15; u++) {
+        for (let u = existingCount + 1; u <= 5; u++) {
           const unitIdx = String(unitCounter).padStart(3, '0');
           const unitId = `unit_${unitIdx}`;
           const unit: any = {
             id: unitId,
             companyId: compId,
-            nome: `Unidade ${String(u).padStart(2, '0')}`,
-            cidade: 'Cidade Teste',
-            estado: 'ST',
+            name: `Unidade ${String(u).padStart(2, '0')}`,
+            city: 'Cidade Teste',
+            state: 'ST',
             status: 'ativo',
-            criadoEm: now,
-            atualizadoEm: now,
-            criadoPor: criadoPor,
+            createdAt: now,
+            updatedAt: now,
+            createdBy: createdBy,
           };
           await this.unitsRepo.create(unit);
           unitCounter++;

@@ -31,30 +31,26 @@ import { LocalidadesService, Estado, Municipio } from '../../../core/services/lo
     <mat-dialog-content [formGroup]="form">
       <mat-form-field appearance="fill" style="width:100%">
         <mat-label>Nome</mat-label>
-        <input matInput formControlName="nome" />
+        <input matInput formControlName="name" />
       </mat-form-field>
 
       <mat-form-field appearance="fill" style="width:100%">
         <mat-label>Estado</mat-label>
-        <mat-select formControlName="estado">
-          <mat-option *ngFor="let estado of estados" [value]="estado.sigla">{{
-            estado.nome
-          }}</mat-option>
+        <mat-select formControlName="state">
+          <mat-option *ngFor="let estado of estados" [value]="estado.sigla">{{ estado.nome }}</mat-option>
         </mat-select>
-        <mat-error *ngIf="form.controls['estado']?.invalid"
+        <mat-error *ngIf="form.controls['state']?.invalid"
           >Estado é obrigatório</mat-error
         >
       </mat-form-field>
 
       <mat-form-field appearance="fill" style="width:100%">
         <mat-label>Município</mat-label>
-        <mat-select formControlName="cidade" [disabled]="loadingMunicipios || !form.get('estado')?.value">
+        <mat-select formControlName="city" [disabled]="loadingMunicipios || !form.get('state')?.value">
           <mat-option *ngIf="loadingMunicipios" disabled>Carregando municípios...</mat-option>
-          <mat-option *ngFor="let municipio of municipios" [value]="municipio.nome">{{
-            municipio.nome
-          }}</mat-option>
+          <mat-option *ngFor="let municipio of municipios" [value]="municipio.nome">{{ municipio.nome }}</mat-option>
         </mat-select>
-        <mat-error *ngIf="form.controls['cidade']?.invalid"
+        <mat-error *ngIf="form.controls['city']?.invalid"
           >Cidade é obrigatória</mat-error
         >
       </mat-form-field>
@@ -62,9 +58,7 @@ import { LocalidadesService, Estado, Municipio } from '../../../core/services/lo
       <mat-form-field appearance="fill" style="width:100%">
         <mat-label>Empresa</mat-label>
         <mat-select formControlName="companyId">
-          <mat-option *ngFor="let c of companies" [value]="c.id">{{
-            c.nome
-          }}</mat-option>
+          <mat-option *ngFor="let c of companies" [value]="c.id">{{ c.name }}</mat-option>
         </mat-select>
         <mat-error *ngIf="form.controls['companyId']?.invalid"
           >Empresa é obrigatória</mat-error
@@ -100,17 +94,17 @@ export class UnitDialogComponent {
   constructor(private dialogRef: MatDialogRef<any>, private fb: FormBuilder) {
     this.form = this.fb.group({
       companyId: ['', [Validators.required]],
-      nome: ['', [Validators.required]],
-      cidade: ['', [Validators.required]],
-      estado: ['', [Validators.required]],
+      name: ['', [Validators.required]],
+      city: ['', [Validators.required]],
+      state: ['', [Validators.required]],
     });
     if (this.data) this.form.patchValue(this.data as any);
     this.loadCompanies();
     this.loadEstados();
     // react to estado change to load municipios
-    this.form.get('estado')?.valueChanges.subscribe((uf: string | null) => {
+    this.form.get('state')?.valueChanges.subscribe((uf: string | null) => {
       this.municipios = [];
-      this.form.patchValue({ cidade: '' });
+      this.form.patchValue({ city: '' });
       this.municipiosError = null;
       if (!uf) return;
       this.loadMunicipios(uf);
@@ -131,7 +125,7 @@ export class UnitDialogComponent {
       next: (list) => {
         this.estados = list.sort((a, b) => a.nome.localeCompare(b.nome));
         // If we are editing and an estado is already present in the form/data, load its municipios
-        const presetUf = this.form.get('estado')?.value as string | null;
+        const presetUf = this.form.get('state')?.value as string | null;
         if (presetUf) {
           this.loadMunicipios(presetUf);
         }
@@ -148,10 +142,13 @@ export class UnitDialogComponent {
     this.localidades.getMunicipiosByUF(uf).subscribe({
       next: (list) => {
         this.municipios = list.sort((a, b) => a.nome.localeCompare(b.nome));
-        // If we are editing and a cidade was provided in the incoming data, preselect it
-        if (this.data && (this.data as any).cidade) {
-          // patch after municipios are available
-          this.form.patchValue({ cidade: (this.data as any).cidade });
+        // If we are editing and a cidade/city was provided in the incoming data, preselect it
+        if (this.data) {
+          const incomingCity = (this.data as any).city ?? (this.data as any).cidade ?? null;
+          if (incomingCity) {
+            // patch after municipios are available
+            this.form.patchValue({ city: incomingCity });
+          }
         }
         this.loadingMunicipios = false;
       },

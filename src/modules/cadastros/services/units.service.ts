@@ -21,19 +21,19 @@ export class UnitsService {
   async createUnit(input: Partial<Unit>): Promise<string> {
     const uid = this.getUid();
     const user = await this.usersRepo.get(uid);
-    const audit: AuditUser = { uid, nome: user?.name ?? '', email: user?.email ?? '' };
+    const audit: AuditUser = { uid, name: user?.name ?? '', email: user?.email ?? '' };
     const now = new Date().toISOString();
     const id = `unit_${makeId()}`;
     const doc: Unit = {
       id,
       companyId: input.companyId ?? '',
-      nome: input.nome ?? '',
-      cidade: input.cidade ?? '',
-      estado: input.estado ?? '',
+      name: input.name ?? '',
+      city: input.city ??  '',
+      state: input.state ??  '',
       status: 'ativo',
-      criadoEm: now,
-      atualizadoEm: now,
-      criadoPor: audit,
+      createdAt: now,
+      updatedAt: now,
+      createdBy: audit,
     };
     await this.repo.create(doc);
     return id;
@@ -41,11 +41,11 @@ export class UnitsService {
 
   async updateUnit(id: string, patch: Partial<Unit>): Promise<void> {
     const now = new Date().toISOString();
-    // Do not allow overwriting criadoPor/criadoEm
+    // Do not allow overwriting createdBy/createdAt
     const uid = this.getUid();
     const user = await this.usersRepo.get(uid);
-    const atualizadoPor: AuditUser = { uid, nome: user?.name ?? '', email: user?.email ?? '' };
-    await this.repo.updateUnit(id, { ...patch, atualizadoEm: now, atualizadoPor } as Partial<Unit>);
+    const updatedBy: AuditUser = { uid, name: user?.name ?? '', email: user?.email ?? '' };
+    await this.repo.updateUnit(id, { ...patch, updatedAt: now, updatedBy } as Partial<Unit>);
   }
 
   async setActive(id: string, ativo: boolean): Promise<void> {

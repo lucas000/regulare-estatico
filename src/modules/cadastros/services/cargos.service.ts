@@ -24,7 +24,7 @@ export class CargosService {
 
     const uid = this.getUid();
     const user = await this.usersRepo.get(uid);
-    const audit: AuditUser = { uid, nome: user?.name ?? '', email: user?.email ?? '' };
+    const audit: AuditUser = { uid, name: user?.name ?? '', email: user?.email ?? '' };
     const now = new Date().toISOString();
     const id = `cargo_${makeId()}`;
     const doc: Cargo = {
@@ -34,9 +34,9 @@ export class CargosService {
       description: input.description ?? '',
       notes: input.notes ?? '',
       status: input.status ?? 'ativo',
-      criadoEm: now,
-      atualizadoEm: now,
-      criadoPor: audit,
+      createdAt: now,
+      updatedAt: now,
+      createdBy: audit,
     } as Cargo;
     await this.repo.create(doc);
     return id;
@@ -46,8 +46,8 @@ export class CargosService {
     const now = new Date().toISOString();
     const uid = this.getUid();
     const user = await this.usersRepo.get(uid);
-    const atualizadoPor: AuditUser = { uid, nome: user?.name ?? '', email: user?.email ?? '' };
-    await this.repo.updateCargo(id, { ...patch, atualizadoEm: now, atualizadoPor } as Partial<Cargo>);
+    const updatedBy: AuditUser = { uid, name: user?.name ?? '', email: user?.email ?? '' };
+    await this.repo.updateCargo(id, { ...patch, updatedAt: now, updatedBy } as Partial<Cargo>);
   }
 
   async setActive(id: string, ativo: boolean) {

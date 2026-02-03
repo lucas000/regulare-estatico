@@ -1,17 +1,17 @@
 export interface AuditUser {
   uid: string;
-  nome: string;
+  name: string;
   email: string;
 }
 
 export interface Company {
   id: string;
-  nome: string;
+  name: string;
   email: string;
   cnpj?: string;
   status?: 'ativo' | 'inativo';
-  criadoEm: string;
-  atualizadoEm?: string;
-  atualizadoPor?: AuditUser;
-  criadoPor: AuditUser;
+  createdAt: string;
+  updatedAt?: string;
+  updatedBy?: AuditUser;
+  createdBy: AuditUser;
 }

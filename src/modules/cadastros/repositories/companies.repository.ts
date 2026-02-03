@@ -33,11 +33,11 @@ export class CompaniesRepository extends BaseFirestoreService<Company> {
   async listByNamePaged(term: string, pageSize: number, startAfterDoc?: any) {
     const col = this.colRef();
     const constraints = [];
-    constraints.push(orderBy('nome'));
+    constraints.push(orderBy('name'));
     if (term && term.trim().length) {
       const t = term.trim();
-      constraints.push(where('nome', '>=', t));
-      constraints.push(where('nome', '<=', t + '\uf8ff'));
+      constraints.push(where('name', '>=', t));
+      constraints.push(where('name', '<=', t + '\uf8ff'));
     }
     constraints.push(limit(pageSize));
     if (startAfterDoc) {
