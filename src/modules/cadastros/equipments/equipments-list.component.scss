@@ -1,0 +1,31 @@
+﻿.cadastros-full { width: 100%; padding: 16px; }
+.toolbar-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+.filters {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.filter-text { width: 100%; max-width: 480px; }
+.filter-type { width: 160px; }
+.actions { display: flex; align-items: center; }
+@media (max-width: 768px) {
+  .toolbar-row { flex-direction: column; align-items: stretch; }
+  .filters { flex-direction: column; align-items: stretch; }
+  .filter-text, .filter-type { max-width: none; width: 100%; }
+  .actions { justify-content: flex-end; }
+}
+.status-badge {
+  padding: 4px 8px;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 12px;
+}
+.status-ativo { background: #16a34a; color: #fff; }
+.status-inativo { background: #e5e7eb; color: #374151; }
