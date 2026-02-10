@@ -9,6 +9,8 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatAutocompleteModule } from '@angular/material/autocomplete';
 import { MatIconModule } from '@angular/material/icon';
 import { MatChipsModule } from '@angular/material/chips';
+import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { CompaniesRepository } from '../repositories/companies.repository';
 import { Subscription, debounceTime, distinctUntilChanged, switchMap, of, catchError, finalize } from 'rxjs';
 import { LocalidadesService, Estado, Municipio } from '../../../core/services/localidades.service';
 import { CompanyPersonType, CompanyType, CompanyCnae } from '../models/company.model';
@@ -41,12 +43,15 @@ function toUpperSafe(v: any): string {
     MatAutocompleteModule,
     MatIconModule,
     MatChipsModule,
+    MatSnackBarModule, 
   ],
   templateUrl: './company-dialog.component.html',
   styleUrls: ['./company-dialog.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class CompanyDialogComponent implements OnInit, OnDestroy {
+  submitted = false;
+  isEdit = false;
   form!: FormGroup;
   private readonly data = inject(MAT_DIALOG_DATA, { optional: true });
   private readonly localidades = inject(LocalidadesService);
@@ -87,6 +92,9 @@ export class CompanyDialogComponent implements OnInit, OnDestroy {
 
   private subs = new Subscription();
 
+  private readonly companiesRepo = inject(CompaniesRepository);
+  private readonly snack = inject(MatSnackBar);
+
   constructor(private dialogRef: MatDialogRef<any>, private fb: FormBuilder) {
     this.form = this.fb.group({
       // Identificação
@@ -124,12 +132,21 @@ export class CompanyDialogComponent implements OnInit, OnDestroy {
 
     if (this.data) {
       const d: any = this.data as any;
+      this.isEdit = !!d?.id;
       this.form.patchValue({
         ...d,
         razaoSocial: d.razaoSocial ?? d.name ?? '',
         document: d.document ?? d.cnpj ?? '',
         institutionalEmail: d.institutionalEmail ?? d.email ?? '',
       });
+
+      // Disable email on edit (cannot change login on update)
+      if (this.isEdit) {
+        const emailCtrl = this.form.get('email');
+        emailCtrl?.setValue(d.email ?? '', { emitEvent: false });
+        emailCtrl?.setErrors(null);
+        emailCtrl?.disable({ emitEvent: false });
+      }
 
       // CNAE (edit mode)
       const main = d.cnaeMain;
@@ -271,6 +288,7 @@ export class CompanyDialogComponent implements OnInit, OnDestroy {
   onSelectCnaeMain(selected: CompanyCnae) {
     this.selectedCnaeMain = selected;
     this.cnaeMainSearch.setValue(this.cnaeDisplay(selected), { emitEvent: false });
+    this.cnaeMainSearch.setErrors(null);
     this.cnaeMainOptions = [];
     this.cd.markForCheck();
   }
@@ -338,16 +356,47 @@ export class CompanyDialogComponent implements OnInit, OnDestroy {
     );
   }
 
-  save() {
+  async save() {
+    this.submitted = true;
     // CNAE principal é obrigatório agora (fora do form)
+    if (!this.selectedCnaeMain?.id) {
+      this.cnaeMainSearch.markAsTouched();
+      const currentErrors = this.cnaeMainSearch.errors || {};
+      this.cnaeMainSearch.setErrors({ ...currentErrors, required: true });
+    }
+
+    // Valida formulário
     if (this.form.invalid || !this.selectedCnaeMain?.id) {
       this.form.markAllAsTouched();
-      // força erro no campo de texto do CNAE principal
-      if (!this.selectedCnaeMain?.id) {
-        this.cnaeMainSearch.markAsTouched();
-      }
       this.cd.markForCheck();
       return;
+    }
+
+    if (!this.isEdit) {
+      const emailCtrl = this.form.get('email') as FormControl;
+      const emailValue = String(emailCtrl.value ?? '').trim();
+      if (!emailValue) {
+        emailCtrl.markAsTouched();
+        this.cd.markForCheck();
+        return;
+      }
+
+      // Verifica se já existe empresa com o mesmo email (login) apenas na inclusão
+      try {
+        const existing = await this.companiesRepo.listBy('email' as any, emailValue, 1);
+        const currentId = (this.data as any)?.id as string | undefined;
+        const duplicate = (existing ?? []).find((c: any) => c && c.id !== currentId);
+        if (duplicate) {
+          emailCtrl.setErrors({ ...(emailCtrl.errors || {}), emailExists: true });
+          emailCtrl.markAsTouched();
+          this.snack.open('Já existe uma empresa cadastrada com este e-mail de login.', 'Fechar', { duration: 4000 });
+          this.cd.markForCheck();
+          return;
+        }
+      } catch (e) {
+        // Em caso de erro na checagem, apenas loga e segue para evitar bloquear o usuário por falha transitória
+        console.warn('Falha ao verificar email existente', e);
+      }
     }
 
     const raw = this.form.getRawValue() as any;

@@ -1,4 +1,4 @@
-<h2 mat-dialog-title>Bia de Samuel</h2>
+<h2 mat-dialog-title>Empresa</h2>
 
 <mat-dialog-content [formGroup]="form" class="company-dialog">
   <!-- Identificação -->
@@ -116,7 +116,7 @@
       </button>
 
       <mat-hint *ngIf="cnaeMainLoading">Carregando...</mat-hint>
-      <mat-error *ngIf="(cnaeMainSearch.touched) && (!selectedCnaeMain?.id)">Obrigatório</mat-error>
+      <mat-error *ngIf="(submitted || cnaeMainSearch.touched) && (!selectedCnaeMain?.id)">Obrigatório</mat-error>
 
       <mat-autocomplete
         #autoCnaeMain="matAutocomplete"
@@ -198,8 +198,9 @@
   <div class="grid">
     <mat-form-field appearance="fill" class="full">
       <mat-label>Email (login da empresa)</mat-label>
-      <input matInput formControlName="email" type="email" />
-      <mat-error *ngIf="form.get('email')?.touched && form.get('email')?.invalid">Obrigatório</mat-error>
+      <input matInput formControlName="email" type="email" [disabled]="isEdit" />
+      <mat-error *ngIf="form.get('email')?.errors?.['emailExists']">Já existe uma empresa cadastrada com este email.</mat-error>
+      <mat-error *ngIf="(submitted || form.get('email')?.touched) && form.get('email')?.invalid && !form.get('email')?.errors?.['emailExists']">Obrigatório e deve ser um e-mail válido</mat-error>
     </mat-form-field>
 
     <mat-form-field appearance="fill" class="full">
