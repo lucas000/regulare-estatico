@@ -29,8 +29,14 @@ export class EmployeesService {
     // validate required fields
     if (!input.companyId) throw new Error('companyId is required');
     if (!input.unitId) throw new Error('unitId is required');
+    if (!input.sectorId) throw new Error('sectorId is required');
     if (!input.name) throw new Error('name is required');
     if (!input.cargoId) throw new Error('cargoId is required');
+
+    // new required fields
+    if (!input.esocialRegistration) throw new Error('esocialRegistration is required');
+    if (!input.esocialCategory) throw new Error('esocialCategory is required');
+    if (!input.admissionDate) throw new Error('admissionDate is required');
 
     const uid = this.getUid();
     const user = await this.usersRepo.get(uid);
@@ -42,11 +48,23 @@ export class EmployeesService {
       id,
       companyId: input.companyId!,
       unitId: input.unitId!,
+      sectorId: input.sectorId!,
       name: input.name!,
       cpf: input.cpf ?? '',
       cargoId: input.cargoId!,
       cargoName: input.cargoName ?? input['cargoName'] ?? '',
       cargoCbo: input.cargoCbo ?? input['cargoCbo'] ?? '',
+
+      // new fields
+      esocialRegistration: input.esocialRegistration!,
+      esocialCategory: input.esocialCategory!,
+      admissionDate: input.admissionDate!,
+
+      // optionals (avoid undefined to keep Firestore happy)
+      phone: input.phone ?? '',
+      email: input.email ?? '',
+      notes: input.notes ?? '',
+
       status: input.status ?? 'ativo',
       createdAt: now,
       updatedAt: now,
@@ -62,7 +80,12 @@ export class EmployeesService {
     const user = await this.usersRepo.get(uid);
     const updatedBy = { uid, name: user?.name ?? '', email: user?.email ?? '' };
     const now = new Date().toISOString();
-    await this.repo.updateEmployee(id, { ...patch, updatedAt: now, updatedBy } as Partial<Employee>);
+
+    // Avoid sending undefined to Firestore
+    const safePatch: any = { ...patch };
+    Object.keys(safePatch).forEach((k) => safePatch[k] === undefined && delete safePatch[k]);
+
+    await this.repo.updateEmployee(id, { ...safePatch, updatedAt: now, updatedBy } as Partial<Employee>);
   }
 
   async setActive(id: string, ativo: boolean) {

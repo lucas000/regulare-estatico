@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatDialogRef, MAT_DIALOG_DATA, MatDialogModule } from '@angular/material/dialog';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators, FormControl } from '@angular/forms';
@@ -7,67 +7,152 @@ import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
 import { MatSelectModule } from '@angular/material/select';
 import { MatAutocompleteModule } from '@angular/material/autocomplete';
+import { MatDatepickerModule } from '@angular/material/datepicker';
+import { MatNativeDateModule } from '@angular/material/core';
 import { CompaniesRepository } from '../repositories/companies.repository';
 import { UnitsRepository } from '../repositories/units.repository';
 import { CargosRepository } from '../repositories/cargos.repository';
+import { SectorsFiltersRepository } from '../repositories/sectors-filters.repository';
 import { debounceTime, distinctUntilChanged, switchMap } from 'rxjs/operators';
 import { Observable, of } from 'rxjs';
 
 @Component({
   selector: 'app-employee-dialog',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, MatFormFieldModule, MatInputModule, MatButtonModule, MatDialogModule, MatSelectModule, MatAutocompleteModule],
+  imports: [
+    CommonModule,
+    ReactiveFormsModule,
+    MatFormFieldModule,
+    MatInputModule,
+    MatButtonModule,
+    MatDialogModule,
+    MatSelectModule,
+    MatAutocompleteModule,
+    MatDatepickerModule,
+    MatNativeDateModule,
+  ],
   template: `
     <h2 mat-dialog-title>Funcionário</h2>
-    <mat-dialog-content [formGroup]="form">
-      <mat-form-field appearance="fill" style="width:100%">
+
+    <mat-dialog-content [formGroup]="form" class="employee-dialog">
+      <!-- Identificação / Vínculos -->
+      <mat-form-field appearance="fill" class="full">
         <mat-label>Empresa</mat-label>
         <mat-select formControlName="companyId">
+          <mat-option *ngIf="companiesLoading" disabled>Carregando empresas...</mat-option>
           <mat-option *ngFor="let c of companies" [value]="c.id">{{ c.name }}</mat-option>
         </mat-select>
+        <mat-error *ngIf="(submitted || form.get('companyId')?.touched) && form.get('companyId')?.invalid">Obrigatório</mat-error>
       </mat-form-field>
 
-      <mat-form-field appearance="fill" style="width:100%">
+      <mat-form-field appearance="fill" class="full">
         <mat-label>Unidade</mat-label>
-        <mat-select formControlName="unitId">
+        <mat-select formControlName="unitId" [disabled]="!form.get('companyId')?.value || unitsLoading">
+          <mat-option *ngIf="unitsLoading" disabled>Carregando unidades...</mat-option>
           <mat-option *ngFor="let u of units" [value]="u.id">{{ u.name }}</mat-option>
         </mat-select>
+        <mat-error *ngIf="(submitted || form.get('unitId')?.touched) && form.get('unitId')?.invalid">Obrigatório</mat-error>
       </mat-form-field>
 
-      <mat-form-field appearance="fill" style="width:100%">
-        <mat-label>Nome</mat-label>
-        <input matInput formControlName="name" />
-      </mat-form-field>
-
-      <mat-form-field appearance="fill" style="width:100%">
-        <mat-label>CPF</mat-label>
-        <input matInput formControlName="cpf" />
-      </mat-form-field>
-
-      <!-- Cargo with autocomplete -->
-      <mat-form-field appearance="fill" style="width:100%">
-        <mat-label>Cargo</mat-label>
-        <input type="text" matInput [formControl]="cargoCtrl" [matAutocomplete]="autoCargo" placeholder="Digite o nome ou CBO" />
-        <mat-autocomplete #autoCargo="matAutocomplete" (optionSelected)="onCargoSelected($event.option.value)">
-          <mat-option *ngFor="let c of (cargos$ | async)" [value]="c">{{ c.name }} — {{ c.cbo }}</mat-option>
-          <mat-option *ngIf="loadingCargos" disabled>Carregando...</mat-option>
-        </mat-autocomplete>
-      </mat-form-field>
-
-      <mat-form-field appearance="fill" style="width:100%">
-        <mat-label>Status</mat-label>
-        <mat-select formControlName="status">
-          <mat-option value="ativo">Ativo</mat-option>
-          <mat-option value="inativo">Inativo</mat-option>
+      <mat-form-field appearance="fill" class="full">
+        <mat-label>Setor</mat-label>
+        <mat-select formControlName="sectorId" [disabled]="!form.get('companyId')?.value || !form.get('unitId')?.value || sectorsLoading">
+          <mat-option *ngIf="sectorsLoading" disabled>Carregando setores...</mat-option>
+          <mat-option *ngFor="let s of sectors" [value]="s.id">{{ s.name }}</mat-option>
         </mat-select>
+        <mat-error *ngIf="(submitted || form.get('sectorId')?.touched) && form.get('sectorId')?.invalid">Obrigatório</mat-error>
+      </mat-form-field>
+
+      <mat-form-field appearance="fill" class="full">
+        <mat-label>Nome completo</mat-label>
+        <input matInput formControlName="name" />
+        <mat-error *ngIf="(submitted || form.get('name')?.touched) && form.get('name')?.invalid">Obrigatório</mat-error>
+      </mat-form-field>
+
+      <div class="grid">
+        <mat-form-field appearance="fill">
+          <mat-label>CPF</mat-label>
+          <input matInput formControlName="cpf" />
+        </mat-form-field>
+
+        <mat-form-field appearance="fill">
+          <mat-label>Matrícula eSocial</mat-label>
+          <input matInput formControlName="esocialRegistration" />
+          <mat-error *ngIf="(submitted || form.get('esocialRegistration')?.touched) && form.get('esocialRegistration')?.invalid">Obrigatório</mat-error>
+        </mat-form-field>
+      </div>
+
+      <div class="grid">
+        <!-- Cargo with autocomplete -->
+        <mat-form-field appearance="fill">
+          <mat-label>Cargo</mat-label>
+          <input type="text" matInput [formControl]="cargoCtrl" [matAutocomplete]="autoCargo" placeholder="Digite o nome ou CBO" />
+          <mat-autocomplete #autoCargo="matAutocomplete" (optionSelected)="onCargoSelected($event.option.value)">
+            <mat-option *ngFor="let c of (cargos$ | async)" [value]="c">{{ c.name }} — {{ c.cbo }}</mat-option>
+            <mat-option *ngIf="loadingCargos" disabled>Carregando...</mat-option>
+          </mat-autocomplete>
+          <mat-error *ngIf="(submitted || form.get('cargoId')?.touched) && !form.get('cargoId')?.value">Obrigatório</mat-error>
+        </mat-form-field>
+
+        <mat-form-field appearance="fill">
+          <mat-label>Categoria eSocial</mat-label>
+          <mat-select formControlName="esocialCategory">
+            <mat-option *ngFor="let c of esocialCategories" [value]="c">{{ c }}</mat-option>
+          </mat-select>
+          <mat-error *ngIf="(submitted || form.get('esocialCategory')?.touched) && form.get('esocialCategory')?.invalid">Obrigatório</mat-error>
+        </mat-form-field>
+      </div>
+
+      <div class="grid">
+        <mat-form-field appearance="fill">
+          <mat-label>Data de admissão</mat-label>
+          <input matInput [matDatepicker]="picker" formControlName="admissionDate" />
+          <mat-datepicker #picker></mat-datepicker>
+          <mat-error *ngIf="(submitted || form.get('admissionDate')?.touched) && form.get('admissionDate')?.invalid">Obrigatório</mat-error>
+        </mat-form-field>
+
+        <mat-form-field appearance="fill">
+          <mat-label>Situação</mat-label>
+          <mat-select formControlName="status">
+            <mat-option value="ativo">Ativo</mat-option>
+            <mat-option value="inativo">Inativo</mat-option>
+          </mat-select>
+        </mat-form-field>
+      </div>
+
+      <!-- Opcionais -->
+      <div class="grid">
+        <mat-form-field appearance="fill">
+          <mat-label>Telefone</mat-label>
+          <input matInput formControlName="phone" />
+        </mat-form-field>
+
+        <mat-form-field appearance="fill">
+          <mat-label>E-mail</mat-label>
+          <input matInput formControlName="email" />
+          <mat-error *ngIf="form.get('email')?.touched && form.get('email')?.invalid">E-mail inválido</mat-error>
+        </mat-form-field>
+      </div>
+
+      <mat-form-field appearance="fill" class="full">
+        <mat-label>Observações</mat-label>
+        <textarea matInput rows="3" formControlName="notes"></textarea>
       </mat-form-field>
     </mat-dialog-content>
 
     <mat-dialog-actions align="end">
       <button mat-button (click)="cancel()">Cancelar</button>
-      <button mat-flat-button color="primary" (click)="save()" [disabled]="form.invalid || !form.get('cargoId')?.value">Salvar</button>
+      <button mat-flat-button color="primary" (click)="save()" [disabled]="companiesLoading || unitsLoading || sectorsLoading">Salvar</button>
     </mat-dialog-actions>
   `,
+  styles: [`
+    .employee-dialog { display: block; }
+    .full { width: 100%; }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    @media (max-width: 768px) {
+      .grid { grid-template-columns: 1fr; }
+    }
+  `],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class EmployeeDialogComponent {
@@ -76,39 +161,127 @@ export class EmployeeDialogComponent {
   cargos$!: Observable<any[]>;
   loadingCargos = false;
 
+  esocialCategories: string[] = [
+    'Empregado',
+    'Trabalhador Temporário',
+    'Avulso',
+    'Agente Público',
+    'Cessão',
+    'Segurado Especial',
+    'Contribuinte Individual',
+    'Bolsista',
+  ];
+
   private readonly data = inject(MAT_DIALOG_DATA);
   private readonly companiesRepo = inject(CompaniesRepository);
   private readonly unitsRepo = inject(UnitsRepository);
   private readonly cargosRepo = inject(CargosRepository);
+  private readonly cd = inject(ChangeDetectorRef);
+  private readonly sectorsRepo = inject(SectorsFiltersRepository);
 
   companies: any[] = [];
   units: any[] = [];
+  sectors: any[] = [];
   private selectedCargo: any | null = null;
+  sectorsLoading = false;
+  submitted = false;
+  companiesLoading = false;
+  unitsLoading = false;
+  private initializing = true;
 
   constructor(private dialogRef: MatDialogRef<any>, private fb: FormBuilder) {
     this.form = this.fb.group({
       companyId: ['', [Validators.required]],
       unitId: ['', [Validators.required]],
+      sectorId: ['', [Validators.required]],
       name: ['', [Validators.required]],
       cpf: [''],
       cargoId: ['', [Validators.required]],
+
+      // new required
+      esocialRegistration: ['', [Validators.required]],
+      esocialCategory: ['', [Validators.required]],
+      admissionDate: ['', [Validators.required]],
+
+      // optionals
+      phone: [''],
+      email: ['', [Validators.email]],
+      notes: [''],
+
       status: ['ativo'],
     });
 
     if (this.data) {
-      this.form.patchValue(this.data as any);
+      const patch: any = { ...(this.data as any) };
+
+      // admissionDate can come as ISO string; make it a Date for datepicker
+      if (patch.admissionDate && typeof patch.admissionDate === 'string') {
+        const d = new Date(patch.admissionDate);
+        patch.admissionDate = isNaN(d.getTime()) ? '' : d;
+      }
+
+      this.form.patchValue(patch);
+
       // Pre-fill cargo control display if editing
       if ((this.data as any).cargoName) {
         this.cargoCtrl.setValue(`${(this.data as any).cargoName} — ${(this.data as any).cargoCbo}`);
       }
     }
 
-    this.loadCompanies();
+    // Carrega empresas e (se edição) unidades/setores antes de liberar a UI
+    this.bootstrapInitialData();
 
     // When company changes, refresh units and clear selected unit
     this.form.get('companyId')?.valueChanges.subscribe(async (v: string | null) => {
-      this.units = v ? await this.unitsRepo.listBy('companyId' as any, v, 500) : [];
-      this.form.patchValue({ unitId: '' });
+      if (!v) {
+        this.units = [];
+        this.sectors = [];
+        if (!this.initializing) {
+          this.form.patchValue({ unitId: '', sectorId: '' }, { emitEvent: false });
+        }
+        this.cd.markForCheck();
+        return;
+      }
+
+      this.unitsLoading = true;
+      this.cd.markForCheck();
+      try {
+        this.units = await this.unitsRepo.listBy('companyId' as any, v, 500);
+      } finally {
+        this.unitsLoading = false;
+        if (!this.initializing) {
+          this.form.patchValue({ unitId: '', sectorId: '' }, { emitEvent: false });
+          this.sectors = [];
+        }
+        this.cd.markForCheck();
+      }
+    });
+
+    this.form.get('unitId')?.valueChanges.subscribe(async (unitId: string | null) => {
+      const companyId = this.form.get('companyId')?.value as string;
+
+      if (!this.initializing) {
+        this.form.patchValue({ sectorId: '' }, { emitEvent: false });
+      }
+
+      this.sectors = [];
+      if (!companyId || !unitId) {
+        this.cd.markForCheck();
+        return;
+      }
+      this.sectorsLoading = true;
+      this.cd.markForCheck();
+      try {
+        this.sectors = await this.sectorsRepo.listByCompanyAndUnit(companyId, unitId, 500);
+      } finally {
+        this.sectorsLoading = false;
+        // Ensure edit mode keeps the saved sector selected
+        const preSectorId = (this.data as any)?.sectorId ?? this.form.get('sectorId')?.value;
+        if (preSectorId) {
+          this.form.patchValue({ sectorId: preSectorId }, { emitEvent: false });
+        }
+        this.cd.markForCheck();
+      }
     });
 
     // Setup cargo autocomplete stream
@@ -132,8 +305,40 @@ export class EmployeeDialogComponent {
     this.cargos$.subscribe({ next: () => (this.loadingCargos = false), error: () => (this.loadingCargos = false) });
   }
 
+  private async bootstrapInitialData() {
+    this.companiesLoading = true;
+    this.cd.markForCheck();
+    try {
+      await this.loadCompanies();
+
+      const companyId = this.form.get('companyId')?.value as string;
+      const unitId = this.form.get('unitId')?.value as string;
+
+      // Pre-load units so the select shows the saved unit immediately in edit mode
+      if (companyId) {
+        this.unitsLoading = true;
+        this.cd.markForCheck();
+        try {
+          this.units = await this.unitsRepo.listBy('companyId' as any, companyId, 500);
+        } finally {
+          this.unitsLoading = false;
+        }
+      }
+
+      // Trigger sectors load for edit mode
+      if (companyId && unitId) {
+        this.form.get('unitId')?.setValue(unitId, { emitEvent: true });
+      }
+    } finally {
+      this.companiesLoading = false;
+      this.initializing = false;
+      this.cd.markForCheck();
+    }
+  }
+
   private async loadCompanies() {
     this.companies = await this.companiesRepo.listAll(500);
+    this.cd.markForCheck();
   }
 
   onCargoSelected(cargo: any) {
@@ -142,12 +347,44 @@ export class EmployeeDialogComponent {
     this.cargoCtrl.setValue(`${cargo.name} — ${cargo.cbo}`);
   }
 
+  private toIsoDate(value: any): string {
+    // Accept Date, ISO string, or yyyy-mm-dd
+    if (!value) return '';
+    if (value instanceof Date && !isNaN(value.getTime())) return value.toISOString();
+    if (typeof value === 'string') {
+      const d = new Date(value);
+      return isNaN(d.getTime()) ? value : d.toISOString();
+    }
+    return '';
+  }
+
+  private toUpperSafe(v: any): string {
+    return String(v ?? '').trim().toUpperCase();
+  }
+
   save() {
-    if (this.form.invalid || !this.form.get('cargoId')?.value) return;
+    this.submitted = true;
+    if (this.form.invalid || !this.form.get('cargoId')?.value) {
+      this.form.markAllAsTouched();
+      this.cd.markForCheck();
+      return;
+    }
+
     const v = this.form.value;
     const cargo = this.selectedCargo;
-    const payload = { ...v, cargoName: cargo?.name ?? '', cargoCbo: cargo?.cbo ?? '' };
+
+    const payload = {
+      ...v,
+      name: this.toUpperSafe(v.name),
+      admissionDate: this.toIsoDate(v.admissionDate),
+      cargoName: cargo?.name ?? (this.data as any)?.cargoName ?? '',
+      cargoCbo: cargo?.cbo ?? (this.data as any)?.cargoCbo ?? '',
+    };
+
     this.dialogRef.close(payload);
   }
-  cancel() { this.dialogRef.close(); }
+
+  cancel() {
+    this.dialogRef.close(null);
+  }
 }

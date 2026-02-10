@@ -1,0 +1,83 @@
+.company-dialog {
+  .section-title {
+    margin: 16px 0 8px;
+    font-size: 14px;
+    font-weight: 600;
+    opacity: 0.9;
+  }
+
+  .grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+
+  mat-form-field {
+    width: 100%;
+  }
+
+  /* Campo que deve ocupar 100% (duas colunas) */
+  .full {
+    grid-column: 1 / -1;
+  }
+
+  /* Mantido por compatibilidade (já usado) */
+  .span-2 {
+    grid-column: 1 / -1;
+  }
+
+  /* Chips de CNAE Secundários */
+  .cnae-chips-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px; /* espaçamento entre chips */
+    width: 100%;
+    max-width: 100%;
+    padding: 4px 0 0 0;
+    box-sizing: border-box;
+    overflow-x: hidden; /* evita scroll horizontal */
+  }
+
+  .cnae-chip {
+    max-width: 100%;
+    min-width: 0;
+    flex: 0 1 auto; /* permite quebrar e ajustar tamanho */
+    white-space: normal; /* permite quebra de linha */
+    line-height: 1.2;
+  }
+  /* Suporte a MDC (Angular Material v15+) */
+  .cnae-chip .mdc-evolution-chip__text-label {
+    white-space: normal;
+    overflow-wrap: anywhere; /* quebra palavras longas */
+    word-break: break-word;
+  }
+  /* Suporte a tema não-MDC (fallback) */
+  .cnae-chip .mat-chip-text,
+  .cnae-chip .mat-chip-ripple {
+    white-space: normal;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+  }
+
+  .error {
+    margin-top: 12px;
+    color: #b91c1c;
+  }
+}
+
+@media (max-width: 768px) {
+  .company-dialog {
+    .grid {
+      grid-template-columns: 1fr;
+    }
+
+    .full,
+    .span-2 {
+      grid-column: 1 / -1;
+    }
+
+    .cnae-chips-list {
+      gap: 8px; /* mantém espaçamento consistente no mobile */
+    }
+  }
+}

@@ -39,7 +39,7 @@ export class CompaniesListComponent implements OnInit, OnDestroy {
   private readonly usersRepo = inject(UsersRepository);
   private readonly snack = inject(MatSnackBar);
 
-  columns = ['name', 'cnpj', 'status', 'acoes'];
+  columns = ['razaoSocial', 'nomeFantasia', 'document', 'companyType', 'location', 'status', 'acoes'];
   companies: Company[] = [];
   dataSource: MatTableDataSource<Company>;
 

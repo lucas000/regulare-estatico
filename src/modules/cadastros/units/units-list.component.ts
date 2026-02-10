@@ -30,7 +30,16 @@ export class UnitsListComponent implements OnInit, OnDestroy {
   private readonly cd = inject(ChangeDetectorRef);
   private readonly snack = inject(MatSnackBar);
 
-  columns = ['name', 'city', 'state', 'status', 'acoes'];
+  columns = ['name', 'document', 'cnaeMain', 'cityUf', 'status', 'acoes'];
+
+  cnaeDisplay(c: any): string {
+    if (!c) return '';
+    if (typeof c === 'string') return c; // legacy
+    const id = String(c?.id ?? '').trim();
+    const desc = String(c?.descricao ?? '').trim();
+    if (!id && !desc) return '';
+    return id && desc ? `${desc} (${id})` : (desc || id);
+  }
   units: Unit[] = [];
   dataSource: MatTableDataSource<Unit>;
 
@@ -139,6 +148,33 @@ export class UnitsListComponent implements OnInit, OnDestroy {
   prevPage() { if (this.paginator && this.paginator.pageIndex > 0) this.paginator.previousPage(); }
 
   newUnit() { const ref = this.dialog.open(UnitDialogComponent, { width: '600px' }); ref.afterClosed().subscribe(async (res: any) => { if (!res) return; await this.unitsService.createUnit(res); this.snack.open('Unidade criada com sucesso', 'Fechar', { duration: 3000 }); this.loadPage(0, true); }); }
-  editUnit(u: Unit) { const ref = this.dialog.open(UnitDialogComponent, { width: '600px', data: u }); ref.afterClosed().subscribe(async (res: any) => { if (!res) return; await this.unitsService.updateUnit(u.id, res); this.loadPage(0, true); }); }
-  toggleActive(u: Unit) { this.unitsService.setActive(u.id, u.status !== 'ativo').then(() => { const msg = u.status !== 'ativo' ? 'Unidade ativada com sucesso' : 'Unidade inativada com sucesso'; this.snack.open(msg, 'Fechar', { duration: 3000 }); this.loadPage(0, true); }); }
+  editUnit(u: Unit) { const ref = this.dialog.open(UnitDialogComponent, { width: '600px', data: u }); ref.afterClosed().subscribe(async (res: any) => { if (!res) return; await this.unitsService.updateUnit(u.id, res); this.snack.open('Unidade atualizada com sucesso', 'Fechar', { duration: 3000 }); this.loadPage(0, true); }); }
+  toggleActive(u: Unit) {
+    const willActivate = u.status !== 'active';
+    this.unitsService.setActive(u.id, willActivate).then(() => {
+      const msg = willActivate ? 'Unidade ativada com sucesso' : 'Unidade inativada com sucesso';
+      this.snack.open(msg, 'Fechar', { duration: 3000 });
+      this.loadPage(0, true);
+    });
+  }
+
+  formatDocument(u: Unit): string {
+    const type = (u as any).documentType ?? '';
+    const num = (u as any).documentNumber ?? '';
+    return [type, num].filter(Boolean).join(' - ');
+  }
+
+  getCity(u: Unit): string {
+    return (u as any).address?.city ?? u.city ?? '';
+  }
+
+  getState(u: Unit): string {
+    return (u as any).address?.state ?? u.state ?? '';
+  }
+
+  getCityUf(u: Unit): string {
+    const c = this.getCity(u);
+    const s = this.getState(u);
+    return [c, s].filter(Boolean).join(' / ');
+  }
 }

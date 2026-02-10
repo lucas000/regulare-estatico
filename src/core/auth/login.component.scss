@@ -1,7 +1,93 @@
-.login-wrapper { height: 100vh; display: grid; place-items: center; padding: 16px; background-image: url('/assets/images/imagem-fundo-login2.png'); background-position: center center; background-repeat: no-repeat; background-size: cover; background-attachment: fixed; }
-.card { width: 100%; max-width: 380px; }
-.full { width: 100%; }
-h1 { margin-top: 0; }
-.hint { color: #fca5a5; }
+.login-page {
+  min-height: 100vh;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 16px;
+  padding: 16px;
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
 
-.card .logo { display: block; margin: 8px auto 16px; width: 60%; max-width: 220px; height: auto; }
+  background-image: url('/assets/images/fundo-oficial.png');
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: cover;
+}
+
+.logo-mvn-out {
+  width: 92%;
+  max-width: 420px;
+  height: auto;
+}
+
+.login-card {
+  width: 100%;
+  /* monitor grande: mantém o look atual */
+  max-width: 420px;
+  /* evita ficar largo demais em notebooks/widescreen */
+  min-width: 320px;
+
+  background: #ffffff;
+  border-radius: 16px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.18);
+  padding: 24px;
+}
+
+.login-logos {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 18px;
+}
+
+.logo { display: block; height: auto; }
+
+.logo-regulare { width: 64%; max-width: 250px; }
+
+.login-form { display: flex; flex-direction: column; gap: 14px; }
+.full { width: 100%; }
+
+.field ::ng-deep .mdc-text-field--outlined { background: #f3f4f6; border-radius: 10px; }
+
+.field ::ng-deep .mdc-notched-outline__leading,
+.field ::ng-deep .mdc-notched-outline__notch,
+.field ::ng-deep .mdc-notched-outline__trailing { border-color: rgba(17, 24, 39, 0.16) !important; }
+
+.submit { height: 48px; font-weight: 600; }
+.error { margin: 0; color: #dc2626; font-size: 13px; }
+
+/* Notebook / telas menores: card mais proporcional e menos "esticado" */
+@media (max-width: 1366px) {
+  .login-page {
+    gap: 12px;
+    padding: 12px;
+  }
+
+  .login-card {
+    max-width: 392px;
+    padding: 20px;
+  }
+
+  .logo-mvn-out {
+    max-width: 392px;
+  }
+}
+
+/* Mobile/tablet: ocupa quase toda largura */
+@media (max-width: 768px) {
+  .login-page { padding: 16px; gap: 12px; }
+
+  .logo-mvn-out { width: 96%; max-width: 380px; }
+
+  .login-card {
+    min-width: 0;
+    max-width: 100%;
+    padding: 20px;
+    border-radius: 14px;
+  }
+
+  .logo-regulare { width: 76%; max-width: 230px; }
+}

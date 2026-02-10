@@ -1,0 +1,38 @@
+.sector-dialog {
+  .section-title {
+    margin: 16px 0 8px;
+    font-size: 14px;
+    font-weight: 600;
+    opacity: 0.9;
+  }
+
+  .grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+
+  mat-form-field {
+    width: 100%;
+  }
+
+  .full {
+    grid-column: 1 / -1;
+  }
+
+  .span-2 {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 768px) {
+  .sector-dialog {
+    .grid {
+      grid-template-columns: 1fr;
+    }
+    .full,
+    .span-2 {
+      grid-column: 1 / -1;
+    }
+  }
+}

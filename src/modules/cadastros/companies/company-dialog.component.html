@@ -1,25 +1,214 @@
-<h2 mat-dialog-title>Empresa</h2>
-<mat-dialog-content [formGroup]="form">
-  <mat-form-field appearance="fill" style="width:100%">
-    <mat-label>Nome</mat-label>
-    <input matInput formControlName="name" />
-  </mat-form-field>
+<h2 mat-dialog-title>Bia de Samuel</h2>
 
-  <mat-form-field appearance="fill" style="width:100%">
-    <mat-label>CNPJ</mat-label>
-    <input matInput formControlName="cnpj" />
-  </mat-form-field>
+<mat-dialog-content [formGroup]="form" class="company-dialog">
+  <!-- Identificação -->
+  <h3 class="section-title">Identificação</h3>
+  <div class="grid">
+    <mat-form-field appearance="fill" class="full">
+      <mat-label>Razão Social</mat-label>
+      <input matInput formControlName="razaoSocial" />
+      <mat-error *ngIf="form.get('razaoSocial')?.touched && form.get('razaoSocial')?.invalid">Obrigatório</mat-error>
+    </mat-form-field>
 
-  <mat-form-field appearance="fill" style="width:100%">
-    <mat-label>Email (obrigatório)</mat-label>
-    <input matInput formControlName="email" type="email" />
-    <mat-error *ngIf="form.controls['email']?.invalid">Email é obrigatório</mat-error>
-  </mat-form-field>
+    <mat-form-field appearance="fill" class="full">
+      <mat-label>Nome Fantasia</mat-label>
+      <input matInput formControlName="nomeFantasia" />
+      <mat-error *ngIf="form.get('nomeFantasia')?.touched && form.get('nomeFantasia')?.invalid">Obrigatório</mat-error>
+    </mat-form-field>
 
-  <mat-form-field appearance="fill" style="width:100%">
-    <mat-label>Senha (opcional)</mat-label>
-    <input matInput formControlName="password" type="password" />
-  </mat-form-field>
+    <mat-form-field appearance="fill">
+      <mat-label>Tipo de Pessoa</mat-label>
+      <mat-select formControlName="personType">
+        <mat-option *ngFor="let t of personTypes" [value]="t.value">{{ t.label }}</mat-option>
+      </mat-select>
+    </mat-form-field>
+
+    <mat-form-field appearance="fill">
+      <mat-label>CNPJ / CPF</mat-label>
+      <input matInput formControlName="document" />
+      <mat-error *ngIf="form.get('document')?.touched && form.get('document')?.invalid">Obrigatório</mat-error>
+    </mat-form-field>
+
+    <mat-form-field appearance="fill">
+      <mat-label>CAEPF (PF Rural)</mat-label>
+      <input matInput formControlName="caepf" />
+      <mat-error *ngIf="form.get('caepf')?.touched && form.get('caepf')?.invalid">Obrigatório para PF</mat-error>
+    </mat-form-field>
+
+    <mat-form-field appearance="fill">
+      <mat-label>CNO</mat-label>
+      <input matInput formControlName="cno" />
+    </mat-form-field>
+  </div>
+
+  <!-- Responsável legal -->
+  <h3 class="section-title">Responsável Legal</h3>
+  <div class="grid">
+    <mat-form-field appearance="fill">
+      <mat-label>Nome completo</mat-label>
+      <input matInput formControlName="legalResponsibleName" />
+      <mat-error *ngIf="form.get('legalResponsibleName')?.touched && form.get('legalResponsibleName')?.invalid">Obrigatório</mat-error>
+    </mat-form-field>
+
+    <mat-form-field appearance="fill">
+      <mat-label>CPF</mat-label>
+      <input matInput formControlName="legalResponsibleCpf" />
+      <mat-error *ngIf="form.get('legalResponsibleCpf')?.touched && form.get('legalResponsibleCpf')?.invalid">Obrigatório</mat-error>
+    </mat-form-field>
+  </div>
+
+  <!-- Endereço -->
+  <h3 class="section-title">Endereço</h3>
+  <div class="grid">
+    <mat-form-field appearance="fill">
+      <mat-label>Logradouro</mat-label>
+      <input matInput formControlName="addressStreet" />
+      <mat-error *ngIf="form.get('addressStreet')?.touched && form.get('addressStreet')?.invalid">Obrigatório</mat-error>
+    </mat-form-field>
+
+    <mat-form-field appearance="fill">
+      <mat-label>UF</mat-label>
+      <mat-select formControlName="addressUf">
+        <mat-option *ngFor="let e of estados" [value]="e.sigla">{{ e.sigla }} - {{ e.nome }}</mat-option>
+      </mat-select>
+      <mat-error *ngIf="form.get('addressUf')?.touched && form.get('addressUf')?.invalid">Obrigatório</mat-error>
+    </mat-form-field>
+
+    <mat-form-field appearance="fill">
+      <mat-label>Município</mat-label>
+      <mat-select formControlName="addressCity" [disabled]="!form.get('addressUf')?.value || municipiosLoading">
+        <mat-option *ngIf="municipiosLoading" disabled>Carregando municípios...</mat-option>
+        <mat-option *ngFor="let m of municipios" [value]="m.nome">{{ m.nome }}</mat-option>
+      </mat-select>
+      <mat-error *ngIf="form.get('addressCity')?.touched && form.get('addressCity')?.invalid">Obrigatório</mat-error>
+    </mat-form-field>
+  </div>
+
+  <!-- Classificação -->
+  <h3 class="section-title">Classificação</h3>
+  <div class="grid">
+    <mat-form-field appearance="fill">
+      <mat-label>Tipo de Empresa</mat-label>
+      <mat-select formControlName="companyType">
+        <mat-option *ngFor="let t of companyTypes" [value]="t.value">{{ t.label }}</mat-option>
+      </mat-select>
+      <mat-error *ngIf="form.get('companyType')?.touched && form.get('companyType')?.invalid">Obrigatório</mat-error>
+    </mat-form-field>
+
+    <!-- CNAE Principal (busca) -->
+    <mat-form-field appearance="fill" class="span-2">
+      <mat-label>CNAE Principal</mat-label>
+      <input
+        matInput
+        [formControl]="cnaeMainSearch"
+        [matAutocomplete]="autoCnaeMain"
+        placeholder="Digite para buscar..."
+      />
+      <button
+        mat-icon-button
+        matSuffix
+        type="button"
+        aria-label="Limpar"
+        *ngIf="cnaeMainSearch.value"
+        (click)="clearCnaeMain()"
+      >
+        <mat-icon>close</mat-icon>
+      </button>
+
+      <mat-hint *ngIf="cnaeMainLoading">Carregando...</mat-hint>
+      <mat-error *ngIf="(cnaeMainSearch.touched) && (!selectedCnaeMain?.id)">Obrigatório</mat-error>
+
+      <mat-autocomplete
+        #autoCnaeMain="matAutocomplete"
+        (optionSelected)="onSelectCnaeMain($event.option.value)"
+        [displayWith]="cnaeDisplay.bind(this)"
+      >
+        <mat-option *ngIf="!cnaeMainLoading && cnaeMainOptions.length === 0 && (cnaeMainSearch.value || '') as v" [disabled]="true">
+          Nenhum resultado
+        </mat-option>
+        <mat-option *ngFor="let opt of cnaeMainOptions" [value]="opt">
+          {{ opt.descricao }} ({{ opt.id }})
+        </mat-option>
+      </mat-autocomplete>
+    </mat-form-field>
+
+    <!-- CNAEs Secundários (múltiplos) -->
+    <mat-form-field appearance="fill" class="span-2">
+      <mat-label>CNAEs Secundários</mat-label>
+      <input
+        matInput
+        [formControl]="cnaeSecondarySearch"
+        [matAutocomplete]="autoCnaeSec"
+        placeholder="Digite para buscar e selecione..."
+      />
+      <mat-hint *ngIf="cnaeSecondaryLoading">Carregando...</mat-hint>
+      <mat-autocomplete #autoCnaeSec="matAutocomplete" (optionSelected)="addSecondary($event.option.value)">
+        <mat-option *ngIf="!cnaeSecondaryLoading && cnaeSecondaryOptions.length === 0 && (cnaeSecondarySearch.value || '')" [disabled]="true">
+          Nenhum resultado
+        </mat-option>
+        <mat-option *ngFor="let opt of cnaeSecondaryOptions" [value]="opt">
+          {{ opt.descricao }} ({{ opt.id }})
+        </mat-option>
+      </mat-autocomplete>
+    </mat-form-field>
+
+    <div class="span-2" *ngIf="selectedCnaeSecondary.length">
+      <mat-chip-listbox class="cnae-chips-list">
+        <mat-chip class="cnae-chip" *ngFor="let c of selectedCnaeSecondary" [removable]="true" (removed)="removeSecondary(c.id)">
+          {{ c.descricao }} ({{ c.id }})
+          <button matChipRemove aria-label="Remover"><mat-icon>cancel</mat-icon></button>
+        </mat-chip>
+      </mat-chip-listbox>
+    </div>
+
+    <mat-form-field appearance="fill" class="span-2">
+      <mat-label>Descrição do Ambiente e Processo de Trabalho</mat-label>
+      <textarea matInput rows="4" formControlName="workEnvironmentDescription"></textarea>
+      <mat-error *ngIf="form.get('workEnvironmentDescription')?.touched && form.get('workEnvironmentDescription')?.invalid">Obrigatório</mat-error>
+    </mat-form-field>
+  </div>
+
+  <!-- Contato -->
+  <h3 class="section-title">Contato</h3>
+  <div class="grid">
+    <mat-form-field appearance="fill">
+      <mat-label>E-mail institucional</mat-label>
+      <input matInput formControlName="institutionalEmail" type="email" />
+      <mat-error *ngIf="form.get('institutionalEmail')?.touched && form.get('institutionalEmail')?.invalid">Obrigatório</mat-error>
+    </mat-form-field>
+
+    <mat-form-field appearance="fill">
+      <mat-label>Telefone / WhatsApp</mat-label>
+      <input matInput formControlName="phoneWhatsapp" />
+      <mat-error *ngIf="form.get('phoneWhatsapp')?.touched && form.get('phoneWhatsapp')?.invalid">Obrigatório</mat-error>
+    </mat-form-field>
+  </div>
+
+  <!-- Controle -->
+  <h3 class="section-title">Controle</h3>
+  <div class="grid">
+    <mat-form-field appearance="fill" class="span-2">
+      <mat-label>Observações gerais</mat-label>
+      <textarea matInput rows="3" formControlName="notes"></textarea>
+    </mat-form-field>
+  </div>
+
+  <!-- Acesso (login da empresa) -->
+  <h3 class="section-title">Acesso</h3>
+  <div class="grid">
+    <mat-form-field appearance="fill" class="full">
+      <mat-label>Email (login da empresa)</mat-label>
+      <input matInput formControlName="email" type="email" />
+      <mat-error *ngIf="form.get('email')?.touched && form.get('email')?.invalid">Obrigatório</mat-error>
+    </mat-form-field>
+
+    <mat-form-field appearance="fill" class="full">
+      <mat-label>Senha (opcional)</mat-label>
+      <input matInput formControlName="password" type="password" />
+    </mat-form-field>
+  </div>
+
+  <p *ngIf="loadError" class="error">{{ loadError }}</p>
 </mat-dialog-content>
 
 <mat-dialog-actions align="end">

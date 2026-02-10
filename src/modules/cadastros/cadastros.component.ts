@@ -5,12 +5,25 @@ import { MatTabsModule, MatTabGroup } from '@angular/material/tabs';
 import { CompaniesListComponent } from './companies/companies-list.component';
 import { UnitsListComponent } from './units/units-list.component';
 import { CargosListComponent } from './cargos/cargos-list.component';
+import { SectorsListComponent } from './sectors/sectors-list.component';
+import { RisksListComponent } from './risks/risks-list.component';
+import { EquipmentsListComponent } from './equipments/equipments-list.component';
 import { SessionService } from '../../core/services/session.service';
 
 @Component({
   selector: 'app-cadastros',
   standalone: true,
-  imports: [CommonModule, MatCardModule, MatTabsModule, CompaniesListComponent, UnitsListComponent, CargosListComponent],
+  imports: [
+    CommonModule,
+    MatCardModule,
+    MatTabsModule,
+    CompaniesListComponent,
+    UnitsListComponent,
+    CargosListComponent,
+    SectorsListComponent,
+    RisksListComponent,
+    EquipmentsListComponent,
+  ],
   template: `
     <mat-card class="card-full">
       <mat-tab-group mat-stretch-tabs (selectedIndexChange)="onTabChange($event)">
@@ -28,11 +41,14 @@ import { SessionService } from '../../core/services/session.service';
         <mat-tab *ngIf="canSee('CARGOS')" label="Cargos">
           <app-cargos-list></app-cargos-list>
         </mat-tab>
-        <mat-tab *ngIf="canSee('RISCOS')" label="Riscos">
-          <p>Em construção</p>
+        <mat-tab *ngIf="canSee('SETORES')" label="Setores">
+          <app-sectors-list></app-sectors-list>
         </mat-tab>
-        <mat-tab *ngIf="canSee('EPIS')" label="EPIs">
-          <p>Em construção</p>
+        <mat-tab *ngIf="canSee('RISCOS')" label="Riscos">
+          <app-risks-list></app-risks-list>
+        </mat-tab>
+        <mat-tab *ngIf="canSee('EPIS')" label="EPIs / EPCs">
+          <app-equipments-list></app-equipments-list>
         </mat-tab>
       </mat-tab-group>
     </mat-card>
@@ -46,10 +62,13 @@ export class CadastrosComponent implements AfterViewInit {
   @ViewChild(CompaniesListComponent) companiesList?: CompaniesListComponent;
   @ViewChild(UnitsListComponent) unitsList?: UnitsListComponent;
   @ViewChild(CargosListComponent) cargosList?: CargosListComponent;
+  @ViewChild(SectorsListComponent) sectorsList?: SectorsListComponent;
+  @ViewChild(RisksListComponent) risksList?: RisksListComponent;
+  @ViewChild(EquipmentsListComponent) equipmentsList?: EquipmentsListComponent;
 
   employeesCompPromise: Promise<any> | null = null;
 
-  canSee(tab: 'EMPRESAS' | 'UNIDADES' | 'FUNCIONARIOS' | 'CARGOS' | 'RISCOS' | 'EPIS') {
+  canSee(tab: 'EMPRESAS' | 'UNIDADES' | 'FUNCIONARIOS' | 'CARGOS' | 'SETORES' | 'RISCOS' | 'EPIS') {
     // Respect rules: CLIENTE cannot access module at all; ADMIN sees all; CONSULTOR sees all except empresas
     const isAdmin = this.session.hasRole(['ADMIN'] as any);
     const isConsultor = this.session.hasRole(['CONSULTOR'] as any);
@@ -62,11 +81,12 @@ export class CadastrosComponent implements AfterViewInit {
   }
 
   ngAfterViewInit(): void {
-    const tabsOrder: Array<'EMPRESAS' | 'UNIDADES' | 'FUNCIONARIOS' | 'CARGOS' | 'RISCOS' | 'EPIS'> = [
+    const tabsOrder: Array<'EMPRESAS' | 'UNIDADES' | 'FUNCIONARIOS' | 'CARGOS' | 'SETORES' | 'RISCOS' | 'EPIS'> = [
       'EMPRESAS',
       'UNIDADES',
       'FUNCIONARIOS',
       'CARGOS',
+      'SETORES',
       'RISCOS',
       'EPIS',
     ];
@@ -89,8 +109,8 @@ export class CadastrosComponent implements AfterViewInit {
 
   onTabChange(index: number): void {
     // Determine which visible tab is at the provided index and call its load method
-    const tabsOrder: Array<'EMPRESAS' | 'UNIDADES' | 'FUNCIONARIOS' | 'CARGOS' | 'RISCOS' | 'EPIS'> = [
-      'EMPRESAS', 'UNIDADES', 'FUNCIONARIOS', 'CARGOS', 'RISCOS', 'EPIS'
+    const tabsOrder: Array<'EMPRESAS' | 'UNIDADES' | 'FUNCIONARIOS' | 'CARGOS' | 'SETORES' | 'RISCOS' | 'EPIS'> = [
+      'EMPRESAS', 'UNIDADES', 'FUNCIONARIOS', 'CARGOS', 'SETORES', 'RISCOS', 'EPIS'
     ];
     const visibleTabs = tabsOrder.filter(t => this.canSee(t));
     const tab = visibleTabs[index];
@@ -102,6 +122,12 @@ export class CadastrosComponent implements AfterViewInit {
       this.unitsList?.load();
     } else if (tab === 'CARGOS') {
       this.cargosList?.load();
+    } else if (tab === 'SETORES') {
+      this.sectorsList?.loadPage(0, true);
+    } else if (tab === 'RISCOS') {
+      this.risksList?.loadPage(0, true);
+    } else if (tab === 'EPIS') {
+      this.equipmentsList?.loadPage(0, true);
     } else if (tab === 'FUNCIONARIOS') {
       // dynamically import the employees component module and set promise so template can render
       this.employeesCompPromise = import('./funcionarios/employees-list.component').then(m => m.EmployeesListComponent);

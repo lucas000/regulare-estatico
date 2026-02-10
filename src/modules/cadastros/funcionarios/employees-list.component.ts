@@ -18,12 +18,12 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { CompaniesRepository } from '../repositories/companies.repository';
 import { UnitsRepository } from '../repositories/units.repository';
 import { SessionService } from '../../../core/services/session.service';
-import {MatOption, MatSelect} from "@angular/material/select";
+import { SectorsRepository } from '../repositories/sectors.repository';
 
 @Component({
   selector: 'app-employees-list',
   standalone: true,
-    imports: [CommonModule, MatTableModule, MatButtonModule, MatIconModule, MatDialogModule, MatFormFieldModule, MatInputModule, MatProgressBarModule, FormsModule, ReactiveFormsModule, MatPaginatorModule, MatSnackBarModule, MatSelect, MatOption],
+    imports: [CommonModule, MatTableModule, MatButtonModule, MatIconModule, MatDialogModule, MatFormFieldModule, MatInputModule, MatProgressBarModule, FormsModule, ReactiveFormsModule, MatPaginatorModule, MatSnackBarModule],
   templateUrl: './employees-list.component.html',
   styleUrls: ['./employees-list.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -36,8 +36,9 @@ export class EmployeesListComponent implements OnInit, OnDestroy {
   private readonly unitsRepo = inject(UnitsRepository);
   private readonly snack = inject(MatSnackBar);
   private readonly session = inject(SessionService);
+  private readonly sectorsRepo = inject(SectorsRepository);
 
-  columns = ['name', 'companyName', 'unitName', 'cargo', 'status', 'acoes'];
+  columns = ['name', 'companyName', 'unitName', 'sectorName', 'esocialCategory', 'cargo', 'status', 'acoes'];
   employees: Employee[] = [];
   dataSource: MatTableDataSource<Employee>;
 
@@ -68,6 +69,7 @@ export class EmployeesListComponent implements OnInit, OnDestroy {
 
   private companiesMap = new Map<string, string>();
   private unitsMap = new Map<string, string>();
+  private sectorsMap = new Map<string, string>();
 
   companyNameById(id: string): string {
     if (!id) return '';
@@ -85,6 +87,19 @@ export class EmployeesListComponent implements OnInit, OnDestroy {
     if (hit) { this.unitsMap.set(id, hit.name); return hit.name; }
     // lazy load single unit and cache (fire and forget)
     this.unitsRepo.getById(id).then(u => { if (u) { this.unitsMap.set(id, (u as any).name); this.cd.markForCheck(); } });
+    return '';
+  }
+
+  sectorNameById(id: string): string {
+    if (!id) return '';
+    if (this.sectorsMap.has(id)) return this.sectorsMap.get(id)!;
+    // lazy load and cache
+    this.sectorsRepo.getById(id).then((s) => {
+      if (s) {
+        this.sectorsMap.set(id, (s as any).name ?? '');
+        this.cd.markForCheck();
+      }
+    });
     return '';
   }
 
