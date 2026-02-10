@@ -27,7 +27,7 @@ import { SessionService } from '../../core/services/session.service';
   template: `
     <mat-card class="card-full">
       <mat-tab-group mat-stretch-tabs (selectedIndexChange)="onTabChange($event)">
-        <mat-tab *ngIf="canSee('EMPRESAS')" label="Empresas">
+        <mat-tab *ngIf="canSee('EMPRESAS')" label="Empreendimentos (PF/PJ)">
           <app-companies-list></app-companies-list>
         </mat-tab>
         <mat-tab *ngIf="canSee('UNIDADES')" label="Unidades">

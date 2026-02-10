@@ -418,4 +418,20 @@ export class CompanyDialogComponent implements OnInit, OnDestroy {
   cancel() {
     this.dialogRef.close();
   }
+
+  public onLegalResponsibleCpfInput(evt: Event) {
+    const el = evt.target as HTMLInputElement;
+    const raw = (el?.value ?? '').toString();
+
+    const digits = raw.replace(/\D/g, '').slice(0, 11);
+    let masked = digits;
+
+    if (digits.length > 3) masked = `${digits.slice(0, 3)}.${digits.slice(3)}`;
+    if (digits.length > 6) masked = `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6)}`;
+    if (digits.length > 9) masked = `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6, 9)}-${digits.slice(9)}`;
+
+    if (masked !== this.form.get('legalResponsibleCpf')?.value) {
+      this.form.get('legalResponsibleCpf')?.setValue(masked, { emitEvent: false });
+    }
+  }
 }

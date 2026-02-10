@@ -7,7 +7,7 @@
 
   <div class="grid">
     <mat-form-field appearance="fill" class="full">
-      <mat-label>Empresa</mat-label>
+      <mat-label>Empreendimento (PF/PJ)</mat-label>
       <mat-select formControlName="companyId">
         <mat-option *ngFor="let c of companies" [value]="c.id">{{ c.razaoSocial || c.name }}</mat-option>
       </mat-select>

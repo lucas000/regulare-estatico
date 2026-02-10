@@ -53,7 +53,7 @@ function toUpperSafe(v: any): string {
     <h2 mat-dialog-title>Unidade</h2>
     <mat-dialog-content [formGroup]="form">
       <mat-form-field appearance="fill" style="width:100%">
-        <mat-label>Empresa</mat-label>
+        <mat-label>Empreendimento (PF/PJ)</mat-label>
         <mat-select formControlName="companyId">
           <mat-option *ngFor="let c of companies" [value]="c.id">{{ c.name }}</mat-option>
         </mat-select>

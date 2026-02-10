@@ -7,8 +7,6 @@ import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
 import { MatSelectModule } from '@angular/material/select';
 import { MatAutocompleteModule } from '@angular/material/autocomplete';
-import { MatDatepickerModule } from '@angular/material/datepicker';
-import { MatNativeDateModule } from '@angular/material/core';
 import { CompaniesRepository } from '../repositories/companies.repository';
 import { UnitsRepository } from '../repositories/units.repository';
 import { CargosRepository } from '../repositories/cargos.repository';
@@ -28,8 +26,6 @@ import { Observable, of } from 'rxjs';
     MatDialogModule,
     MatSelectModule,
     MatAutocompleteModule,
-    MatDatepickerModule,
-    MatNativeDateModule,
   ],
   template: `
     <h2 mat-dialog-title>Funcionário</h2>
@@ -37,9 +33,9 @@ import { Observable, of } from 'rxjs';
     <mat-dialog-content [formGroup]="form" class="employee-dialog">
       <!-- Identificação / Vínculos -->
       <mat-form-field appearance="fill" class="full">
-        <mat-label>Empresa</mat-label>
+        <mat-label>Empreendimento (PF/PJ)</mat-label>
         <mat-select formControlName="companyId">
-          <mat-option *ngIf="companiesLoading" disabled>Carregando empresas...</mat-option>
+          <mat-option *ngIf="companiesLoading" disabled>Carregando empreendimentos...</mat-option>
           <mat-option *ngFor="let c of companies" [value]="c.id">{{ c.name }}</mat-option>
         </mat-select>
         <mat-error *ngIf="(submitted || form.get('companyId')?.touched) && form.get('companyId')?.invalid">Obrigatório</mat-error>
@@ -72,7 +68,15 @@ import { Observable, of } from 'rxjs';
       <div class="grid">
         <mat-form-field appearance="fill">
           <mat-label>CPF</mat-label>
-          <input matInput formControlName="cpf" />
+          <input
+            matInput
+            formControlName="cpf"
+            placeholder="000.000.000-00"
+            inputmode="numeric"
+            autocomplete="off"
+            maxlength="14"
+            (input)="onCpfInput($event)"
+          />
         </mat-form-field>
 
         <mat-form-field appearance="fill">
@@ -103,12 +107,27 @@ import { Observable, of } from 'rxjs';
         </mat-form-field>
       </div>
 
+      <mat-form-field appearance="fill" class="full">
+        <mat-label>Descrição da Função</mat-label>
+        <textarea matInput rows="4" formControlName="jobDescription" maxlength="500"></textarea>
+        <mat-hint align="end">{{ (form.get('jobDescription')?.value?.length || 0) }}/500</mat-hint>
+        <mat-error *ngIf="(submitted || form.get('jobDescription')?.touched) && form.get('jobDescription')?.hasError('maxlength')">Máximo 500 caracteres</mat-error>
+      </mat-form-field>
+
       <div class="grid">
         <mat-form-field appearance="fill">
           <mat-label>Data de admissão</mat-label>
-          <input matInput [matDatepicker]="picker" formControlName="admissionDate" />
-          <mat-datepicker #picker></mat-datepicker>
-          <mat-error *ngIf="(submitted || form.get('admissionDate')?.touched) && form.get('admissionDate')?.invalid">Obrigatório</mat-error>
+          <input
+            matInput
+            formControlName="admissionDate"
+            placeholder="dd/MM/aaaa"
+            inputmode="numeric"
+            autocomplete="off"
+            maxlength="10"
+            (input)="onAdmissionDateInput($event)"
+          />
+          <mat-error *ngIf="(submitted || form.get('admissionDate')?.touched) && form.get('admissionDate')?.hasError('required')">Obrigatório</mat-error>
+          <mat-error *ngIf="(submitted || form.get('admissionDate')?.touched) && form.get('admissionDate')?.hasError('pattern')">Data inválida (use dd/MM/aaaa)</mat-error>
         </mat-form-field>
 
         <mat-form-field appearance="fill">
@@ -201,7 +220,10 @@ export class EmployeeDialogComponent {
       // new required
       esocialRegistration: ['', [Validators.required]],
       esocialCategory: ['', [Validators.required]],
-      admissionDate: ['', [Validators.required]],
+      admissionDate: ['', [Validators.required, Validators.pattern(/^\d{2}\/\d{2}\/\d{4}$/)]],
+
+      // opcional
+      jobDescription: ['', [Validators.maxLength(500)]],
 
       // optionals
       phone: [''],
@@ -214,12 +236,7 @@ export class EmployeeDialogComponent {
     if (this.data) {
       const patch: any = { ...(this.data as any) };
 
-      // admissionDate can come as ISO string; make it a Date for datepicker
-      if (patch.admissionDate && typeof patch.admissionDate === 'string') {
-        const d = new Date(patch.admissionDate);
-        patch.admissionDate = isNaN(d.getTime()) ? '' : d;
-      }
-
+      // admissionDate agora é string; não converter para Date
       this.form.patchValue(patch);
 
       // Pre-fill cargo control display if editing
@@ -347,15 +364,37 @@ export class EmployeeDialogComponent {
     this.cargoCtrl.setValue(`${cargo.name} — ${cargo.cbo}`);
   }
 
-  private toIsoDate(value: any): string {
-    // Accept Date, ISO string, or yyyy-mm-dd
-    if (!value) return '';
-    if (value instanceof Date && !isNaN(value.getTime())) return value.toISOString();
-    if (typeof value === 'string') {
-      const d = new Date(value);
-      return isNaN(d.getTime()) ? value : d.toISOString();
+  onAdmissionDateInput(evt: Event) {
+    const el = evt.target as HTMLInputElement;
+    const raw = (el?.value ?? '').toString();
+
+    // mantém apenas dígitos e aplica máscara dd/MM/aaaa
+    const digits = raw.replace(/\D/g, '').slice(0, 8);
+    let masked = '';
+    if (digits.length <= 2) masked = digits;
+    else if (digits.length <= 4) masked = `${digits.slice(0, 2)}/${digits.slice(2)}`;
+    else masked = `${digits.slice(0, 2)}/${digits.slice(2, 4)}/${digits.slice(4)}`;
+
+    if (masked !== this.form.get('admissionDate')?.value) {
+      this.form.get('admissionDate')?.setValue(masked, { emitEvent: false });
     }
-    return '';
+  }
+
+  onCpfInput(evt: Event) {
+    const el = evt.target as HTMLInputElement;
+    const raw = (el?.value ?? '').toString();
+
+    // mantém apenas dígitos e aplica máscara 000.000.000-00
+    const digits = raw.replace(/\D/g, '').slice(0, 11);
+    let masked = digits;
+
+    if (digits.length > 3) masked = `${digits.slice(0, 3)}.${digits.slice(3)}`;
+    if (digits.length > 6) masked = `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6)}`;
+    if (digits.length > 9) masked = `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6, 9)}-${digits.slice(9)}`;
+
+    if (masked !== this.form.get('cpf')?.value) {
+      this.form.get('cpf')?.setValue(masked, { emitEvent: false });
+    }
   }
 
   private toUpperSafe(v: any): string {
@@ -376,7 +415,8 @@ export class EmployeeDialogComponent {
     const payload = {
       ...v,
       name: this.toUpperSafe(v.name),
-      admissionDate: this.toIsoDate(v.admissionDate),
+      // admissionDate permanece string dd/MM/aaaa
+      admissionDate: String(v.admissionDate ?? '').trim(),
       cargoName: cargo?.name ?? (this.data as any)?.cargoName ?? '',
       cargoCbo: cargo?.cbo ?? (this.data as any)?.cargoCbo ?? '',
     };

@@ -16,6 +16,9 @@ export interface Employee {
   esocialCategory: string;
   admissionDate: string;
 
+  // Campo opcional (cadastro/edição apenas)
+  jobDescription?: string;
+
   // Opcionais
   phone?: string;
   email?: string;

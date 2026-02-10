@@ -1,4 +1,4 @@
-<h2 mat-dialog-title>Empresa</h2>
+<h2 mat-dialog-title>Empreendimento</h2>
 
 <mat-dialog-content [formGroup]="form" class="company-dialog">
   <!-- Identificação -->
@@ -52,7 +52,15 @@
 
     <mat-form-field appearance="fill">
       <mat-label>CPF</mat-label>
-      <input matInput formControlName="legalResponsibleCpf" />
+      <input
+        matInput
+        formControlName="legalResponsibleCpf"
+        placeholder="000.000.000-00"
+        inputmode="numeric"
+        autocomplete="off"
+        maxlength="14"
+        (input)="onLegalResponsibleCpfInput($event)"
+      />
       <mat-error *ngIf="form.get('legalResponsibleCpf')?.touched && form.get('legalResponsibleCpf')?.invalid">Obrigatório</mat-error>
     </mat-form-field>
   </div>
@@ -88,7 +96,7 @@
   <h3 class="section-title">Classificação</h3>
   <div class="grid">
     <mat-form-field appearance="fill">
-      <mat-label>Tipo de Empresa</mat-label>
+      <mat-label>Tipo de Empreendimento</mat-label>
       <mat-select formControlName="companyType">
         <mat-option *ngFor="let t of companyTypes" [value]="t.value">{{ t.label }}</mat-option>
       </mat-select>
@@ -123,7 +131,7 @@
         (optionSelected)="onSelectCnaeMain($event.option.value)"
         [displayWith]="cnaeDisplay.bind(this)"
       >
-        <mat-option *ngIf="!cnaeMainLoading && cnaeMainOptions.length === 0 && (cnaeMainSearch.value || '') as v" [disabled]="true">
+        <mat-option *ngIf="!cnaeMainLoading && cnaeMainOptions.length === 0 && (cnaeMainSearch.value || '')" [disabled]="true">
           Nenhum resultado
         </mat-option>
         <mat-option *ngFor="let opt of cnaeMainOptions" [value]="opt">
@@ -197,9 +205,9 @@
   <h3 class="section-title">Acesso</h3>
   <div class="grid">
     <mat-form-field appearance="fill" class="full">
-      <mat-label>Email (login da empresa)</mat-label>
+      <mat-label>Email (login do empreendimento)</mat-label>
       <input matInput formControlName="email" type="email" [disabled]="isEdit" />
-      <mat-error *ngIf="form.get('email')?.errors?.['emailExists']">Já existe uma empresa cadastrada com este email.</mat-error>
+      <mat-error *ngIf="form.get('email')?.errors?.['emailExists']">Já existe um empreendimento cadastrada com este email.</mat-error>
       <mat-error *ngIf="(submitted || form.get('email')?.touched) && form.get('email')?.invalid && !form.get('email')?.errors?.['emailExists']">Obrigatório e deve ser um e-mail válido</mat-error>
     </mat-form-field>
 

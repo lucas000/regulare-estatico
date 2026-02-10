@@ -60,6 +60,9 @@ export class EmployeesService {
       esocialCategory: input.esocialCategory!,
       admissionDate: input.admissionDate!,
 
+      // optional
+      jobDescription: input.jobDescription ?? '',
+
       // optionals (avoid undefined to keep Firestore happy)
       phone: input.phone ?? '',
       email: input.email ?? '',
@@ -84,6 +87,11 @@ export class EmployeesService {
     // Avoid sending undefined to Firestore
     const safePatch: any = { ...patch };
     Object.keys(safePatch).forEach((k) => safePatch[k] === undefined && delete safePatch[k]);
+
+    // Normalize optional new field (avoid undefined)
+    if ('jobDescription' in safePatch) {
+      safePatch.jobDescription = safePatch.jobDescription ?? '';
+    }
 
     await this.repo.updateEmployee(id, { ...safePatch, updatedAt: now, updatedBy } as Partial<Employee>);
   }
