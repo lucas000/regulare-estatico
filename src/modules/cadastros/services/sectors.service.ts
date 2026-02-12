@@ -71,8 +71,12 @@ export class SectorsService {
   }
 
   async listSectorsPaged(term: string, pageSize: number, startAfterDoc?: any) {
-    const companyId = this.isAdmin() ? '' : this.getLoggedCompanyId();
-    return this.repo.listPaged(companyId || '', '', term, pageSize, startAfterDoc);
+    if (!this.isAdmin()) {
+      const cid = this.getLoggedCompanyId();
+      return this.repo.listPaged(cid || '', '', term, pageSize, startAfterDoc);
+    }
+    const scoped = (this.session as any).adminScopeCompanyId?.() ?? '';
+    return this.repo.listPaged(scoped || '', '', term, pageSize, startAfterDoc);
   }
 
   private getUid(): string {

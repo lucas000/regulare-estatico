@@ -17,6 +17,12 @@ export class SessionService {
   private readonly _loading = signal<boolean>(true);
   readonly loading = this._loading.asReadonly();
 
+  // Admin scope (global company filter for ADMIN)
+  private readonly _adminScopeCompanyId = signal<string | null>(readFromStorage('adminScopeCompanyId'));
+  private readonly _adminScopeCompanyName = signal<string | null>(readFromStorage('adminScopeCompanyName'));
+  readonly adminScopeCompanyId = computed(() => this._adminScopeCompanyId());
+  readonly adminScopeCompanyName = computed(() => this._adminScopeCompanyName());
+
   constructor() {
     // React to Firebase auth state changes
     this.auth.authState$
@@ -50,7 +56,34 @@ export class SessionService {
     return roles.includes(u.profile);
   }
 
+  setAdminScopeCompany(companyId: string | null, companyName?: string | null) {
+    this._adminScopeCompanyId.set(companyId ?? null);
+    this._adminScopeCompanyName.set(companyName ?? null);
+    writeToStorage('adminScopeCompanyId', companyId ?? null);
+    writeToStorage('adminScopeCompanyName', companyName ?? null);
+  }
+
+  clearAdminScope() { this.setAdminScopeCompany(null, null); }
+
   logout() {
     return this.auth.logout().subscribe(() => this.router.navigateByUrl('/login'));
+  }
+}
+
+function readFromStorage(key: string): string | null {
+  try {
+    const v = localStorage.getItem(key);
+    return v ? JSON.parse(v) : null;
+  } catch {
+    return null;
+  }
+}
+
+function writeToStorage(key: string, value: string | null) {
+  try {
+    if (value === null || value === undefined) localStorage.removeItem(key);
+    else localStorage.setItem(key, JSON.stringify(value));
+  } catch {
+    // ignore storage errors
   }
 }

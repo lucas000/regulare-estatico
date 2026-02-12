@@ -14,6 +14,7 @@ export type CompanyType =
   | 'Aviação Agrícola'
   | 'Comércio'
   | 'Serviços'
+  | 'Associação'
   | 'Outro';
 
 export interface CompanyCnae {

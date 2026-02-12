@@ -6,8 +6,6 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 import { MatButtonModule } from '@angular/material/button';
-import { MatDatepickerModule } from '@angular/material/datepicker';
-import { MatNativeDateModule } from '@angular/material/core';
 
 function toUpperSafe(v: any): string {
   return String(v ?? '').trim().toUpperCase();
@@ -24,8 +22,6 @@ function toUpperSafe(v: any): string {
     MatInputModule,
     MatSelectModule,
     MatButtonModule,
-    MatDatepickerModule,
-    MatNativeDateModule,
   ],
   template: `
     <h2 mat-dialog-title>EPI / EPC</h2>
@@ -66,8 +62,17 @@ function toUpperSafe(v: any): string {
 
         <mat-form-field appearance="fill">
           <mat-label>Validade</mat-label>
-          <input matInput [matDatepicker]="picker" formControlName="validUntil" [disabled]="form.get('hasCertification')?.value === false" />
-          <mat-datepicker #picker></mat-datepicker>
+          <input
+            matInput
+            formControlName="validUntil"
+            placeholder="dd/MM/aaaa"
+            inputmode="numeric"
+            autocomplete="off"
+            maxlength="10"
+            [disabled]="form.get('hasCertification')?.value === false"
+            (input)="onValidUntilInput($event)"
+          />
+          <mat-error *ngIf="(submitted || form.get('validUntil')?.touched) && form.get('validUntil')?.hasError('pattern')">Data inválida (use dd/MM/aaaa)</mat-error>
         </mat-form-field>
       </div>
 
@@ -113,7 +118,7 @@ export class EquipmentDialogComponent {
     type: ['EPI', [Validators.required]],
     hasCertification: [true as any, [Validators.required]],
     certificationNumber: ['', []],
-    validUntil: [''],
+    validUntil: ['', [Validators.pattern(/^\d{2}\/\d{2}\/\d{4}$/)]],
     notes: [''],
     status: ['ativo', [Validators.required]],
   });
@@ -121,11 +126,7 @@ export class EquipmentDialogComponent {
   constructor() {
     if (this.data) {
       const patch: any = { ...this.data };
-      // validUntil may come as ISO string
-      if (patch.validUntil && typeof patch.validUntil === 'string') {
-        const d = new Date(patch.validUntil);
-        patch.validUntil = isNaN(d.getTime()) ? '' : d;
-      }
+      // validUntil já é string dd/MM/aaaa - não converter
       this.form.patchValue(patch);
       this.form.patchValue({ name: toUpperSafe(patch?.name) }, { emitEvent: false });
     }
@@ -160,14 +161,20 @@ export class EquipmentDialogComponent {
     }
   }
 
-  private toIsoDate(value: any): string {
-    if (!value) return '';
-    if (value instanceof Date && !isNaN(value.getTime())) return value.toISOString();
-    if (typeof value === 'string') {
-      const d = new Date(value);
-      return isNaN(d.getTime()) ? value : d.toISOString();
+  onValidUntilInput(evt: Event) {
+    const el = evt.target as HTMLInputElement;
+    const raw = (el?.value ?? '').toString();
+
+    // mantém apenas dígitos e aplica máscara dd/MM/aaaa
+    const digits = raw.replace(/\D/g, '').slice(0, 8);
+    let masked = '';
+    if (digits.length <= 2) masked = digits;
+    else if (digits.length <= 4) masked = `${digits.slice(0, 2)}/${digits.slice(2)}`;
+    else masked = `${digits.slice(0, 2)}/${digits.slice(2, 4)}/${digits.slice(4)}`;
+
+    if (masked !== this.form.get('validUntil')?.value) {
+      this.form.get('validUntil')?.setValue(masked, { emitEvent: false });
     }
-    return '';
   }
 
   save() {
@@ -190,7 +197,7 @@ export class EquipmentDialogComponent {
     const raw: any = this.form.getRawValue();
     this.dialogRef.close({
       ...raw,
-      validUntil: has ? this.toIsoDate(raw.validUntil) : '',
+      validUntil: has ? String(raw.validUntil ?? '').trim() : '',
       certificationNumber: has ? String(raw.certificationNumber ?? '').trim() : '',
     });
   }

@@ -79,6 +79,7 @@ import { Observable, of } from 'rxjs';
             maxlength="14"
             (input)="onCpfInput($event)"
           />
+            <mat-error *ngIf="(submitted || form.get('cpf')?.touched) && form.get('cpf')?.invalid">Obrigatório</mat-error>
         </mat-form-field>
 
         <mat-form-field appearance="fill">
@@ -219,7 +220,7 @@ export class EmployeeDialogComponent {
       unitId: ['', [Validators.required]],
       sectorId: ['', [Validators.required]],
       name: ['', [Validators.required]],
-      cpf: [''],
+      cpf: ['', [Validators.required]],
       cargoId: ['', [Validators.required]],
 
       // new required

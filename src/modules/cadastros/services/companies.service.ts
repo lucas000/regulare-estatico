@@ -60,6 +60,21 @@ export class CompaniesService {
   }
 
   /**
+   * Retorna o companyId do escopo selecionado pelo ADMIN no topbar.
+   * Se ADMIN não selecionou nenhuma empresa específica, retorna null (todas).
+   * Se for CLIENTE, retorna o companyId do usuário logado.
+   */
+  private getScopedCompanyId(): string | null {
+    if (this.isAdmin()) {
+      // Verifica se ADMIN selecionou uma empresa específica no topbar
+      const scopedId = this.session.adminScopeCompanyId();
+      return scopedId || null; // null = todas as empresas
+    }
+    // CLIENTE: sempre retorna a empresa vinculada
+    return this.getLoggedCompanyId() || null;
+  }
+
+  /**
    * Create company and a CLIENTE user in Firebase Auth + /users in a safe, rollback-capable flow.
    */
   async createCompanyWithClientUser(input: Partial<Company> & { email: string; password?: string }): Promise<string> {
@@ -255,22 +270,39 @@ export class CompaniesService {
   }
 
   async listCompaniesPaged(term: string, pageSize: number, startAfterDoc?: any) {
-    // CLIENTE: listar somente a própria empresa
-    if (!this.isAdmin()) {
-      const myCompanyId = this.getLoggedCompanyId();
-      if (!myCompanyId) return { docs: [], lastDoc: null };
-      const c = await this.repo.getById(myCompanyId);
+    // Obtém o escopo de empresa (ADMIN com seleção ou CLIENTE)
+    const scopedCompanyId = this.getScopedCompanyId();
+
+    // Se há um escopo definido (ADMIN selecionou empresa OU é CLIENTE), listar apenas essa empresa
+    if (scopedCompanyId) {
+      const c = await this.repo.getById(scopedCompanyId);
+      // Aplicar filtro de termo se houver
+      if (c && term) {
+        const t = term.toLowerCase();
+        const matchName = (c.name || '').toLowerCase().includes(t);
+        const matchRazao = (c.razaoSocial || '').toLowerCase().includes(t);
+        const matchFantasia = (c.nomeFantasia || '').toLowerCase().includes(t);
+        if (!matchName && !matchRazao && !matchFantasia) {
+          return { docs: [], lastDoc: null };
+        }
+      }
       return { docs: c ? [c] : [], lastDoc: null };
     }
+
+    // ADMIN sem escopo específico: listar todas
     return this.repo.listByNamePaged(term, pageSize, startAfterDoc);
   }
 
   async listCompanies(): Promise<Company[]> {
-    if (!this.isAdmin()) {
-      const myCompanyId = this.getLoggedCompanyId();
-      const c = myCompanyId ? await this.repo.getById(myCompanyId) : null;
+    const scopedCompanyId = this.getScopedCompanyId();
+
+    // Se há um escopo definido, listar apenas essa empresa
+    if (scopedCompanyId) {
+      const c = await this.repo.getById(scopedCompanyId);
       return c ? [c] : [];
     }
+
+    // ADMIN sem escopo: listar todas
     return this.repo.listAll();
   }
 

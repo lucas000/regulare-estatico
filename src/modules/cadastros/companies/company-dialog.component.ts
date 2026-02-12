@@ -87,6 +87,7 @@ export class CompanyDialogComponent implements OnInit, OnDestroy {
     { value: 'Aviação Agrícola', label: 'Aviação Agrícola' },
     { value: 'Comércio', label: 'Comércio' },
     { value: 'Serviços', label: 'Serviços' },
+    { value: 'Associação', label: 'Associação' },
     { value: 'Outro', label: 'Outro' },
   ];
 
@@ -419,10 +420,11 @@ export class CompanyDialogComponent implements OnInit, OnDestroy {
     this.dialogRef.close();
   }
 
-  public onLegalResponsibleCpfInput(evt: Event) {
+  onLegalResponsibleCpfInput(evt: Event) {
     const el = evt.target as HTMLInputElement;
     const raw = (el?.value ?? '').toString();
 
+    // mantém apenas dígitos e aplica máscara 000.000.000-00
     const digits = raw.replace(/\D/g, '').slice(0, 11);
     let masked = digits;
 

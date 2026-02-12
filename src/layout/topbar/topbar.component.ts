@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, EventEmitter, Output, inject, OnDestroy } from '@angular/core';
+import { ChangeDetectionStrategy, Component, EventEmitter, Output, inject, OnDestroy, OnInit, signal, effect, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatToolbarModule } from '@angular/material/toolbar';
 import { MatButtonModule } from '@angular/material/button';
@@ -11,20 +11,26 @@ import { Router, NavigationEnd, ActivatedRoute } from '@angular/router';
 import { filter, map } from 'rxjs/operators';
 import { Subscription, Observable, merge, of } from 'rxjs';
 import { MatBadgeModule } from '@angular/material/badge';
+import { FormsModule } from '@angular/forms';
+import { CompaniesRepository } from '../../modules/cadastros/repositories/companies.repository';
+import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 
 @Component({
   selector: 'app-topbar',
   standalone: true,
-    imports: [CommonModule, MatToolbarModule, MatButtonModule, MatIconModule, MatMenuModule, MatSelectModule, MatOptionModule, MatBadgeModule],
+  imports: [CommonModule, MatToolbarModule, MatButtonModule, MatIconModule, MatMenuModule, MatSelectModule, MatOptionModule, MatBadgeModule, FormsModule, MatSnackBarModule, MatProgressSpinnerModule],
   templateUrl: './topbar.component.html',
   styleUrls: ['./topbar.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class TopbarComponent implements OnDestroy {
+export class TopbarComponent implements OnDestroy, OnInit {
   @Output() toggle = new EventEmitter<void>();
   readonly session = inject(SessionService);
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
+  private readonly companiesRepo = inject(CompaniesRepository);
+  private readonly snackBar = inject(MatSnackBar);
 
   title$: Observable<string>;
   private sub: Subscription;
@@ -33,7 +39,21 @@ export class TopbarComponent implements OnDestroy {
   notificationsCount = 0;
   alertsCount = 0;
 
-  constructor() {
+  // estado para UI
+  companiesLoading = false;
+
+  // Use método para facilitar uso no template (*ngIf="isAdmin()")
+  isAdmin(): boolean {
+    return this.session.hasRole(['ADMIN'] as any);
+  }
+
+  companies: Array<{ id: string; name: string }> = [];
+  // ngModel-friendly property for the select
+  selectedCompanyIdModel: string = '';
+  private selectedCompanyId = signal<string>('');
+  private _loadedCompanies = false;
+
+  constructor(private cd: ChangeDetectorRef) {
     // derive title from deepest activated route data.title or fallback to path segment
     const events$ = this.router.events.pipe(
       filter((e): e is NavigationEnd => e instanceof NavigationEnd),
@@ -45,6 +65,84 @@ export class TopbarComponent implements OnDestroy {
 
     // subscribe once to keep alive
     this.sub = this.title$.subscribe();
+
+    // Effect DEVE ser criado no constructor (injection context)
+    // Carrega empresas APENAS quando o session terminar de carregar e o usuário for ADMIN
+    effect(() => {
+      const loading = this.session.loading();
+      const user = this.session.user();
+      const admin = this.isAdmin();
+
+      console.log('[Topbar effect] loading=', loading, 'user=', user?.email, 'admin=', admin, '_loadedCompanies=', this._loadedCompanies);
+
+      if (loading) return;
+      if (!admin || !user) return;
+      if (this._loadedCompanies || this.companiesLoading) return;
+
+      this.loadCompaniesForAdmin();
+    });
+  }
+
+  ngOnInit(): void {
+    // effect movido para constructor
+  }
+
+  private async loadCompaniesForAdmin() {
+    this.companiesLoading = true;
+    this.cd.markForCheck();
+
+    try {
+      const list: any[] = await this.companiesRepo.listAll(500);
+      this.companies = (list || []).map((c: any) => ({ id: c.id, name: c.razaoSocial || c.name }));
+      const scopedId = this.session.adminScopeCompanyId();
+      this.selectedCompanyIdModel = scopedId ?? '';
+      this.selectedCompanyId.set(this.selectedCompanyIdModel);
+    } catch (e) {
+      console.error('[Topbar] Erro ao carregar empresas (ADMIN). Verifique Firestore Rules para /companies.', e);
+      this.companies = [];
+    } finally {
+      this._loadedCompanies = true;
+      this.companiesLoading = false;
+      this.cd.markForCheck();
+    }
+  }
+
+  changingCompany = false;
+
+  async onSelectedCompanyChange(id: string) {
+    this.selectedCompanyId.set(id || '');
+
+    // Mostrar loading
+    this.changingCompany = true;
+    this.cd.markForCheck();
+
+    let companyName = 'Todas as empresas';
+    if (!id) {
+      this.session.setAdminScopeCompany(null, null);
+    } else {
+      const comp = this.companies.find(c => c.id === id) || null;
+      companyName = comp?.name ?? 'Empresa';
+      this.session.setAdminScopeCompany(id, comp?.name ?? null);
+    }
+
+    // Feedback visual
+    this.snackBar.open(`Escopo alterado para: ${companyName}`, 'OK', { duration: 2000 });
+
+    // Pequeno delay para feedback visual
+    await new Promise(r => setTimeout(r, 400));
+
+    this.changingCompany = false;
+    this.cd.markForCheck();
+
+    // Redirecionar para dashboard ou forçar reload se já estiver lá
+    const currentUrl = this.router.url;
+    if (currentUrl.includes('/app/dashboard')) {
+      // Força reload navegando para outra rota e voltando
+      await this.router.navigateByUrl('/app', { skipLocationChange: true });
+      await this.router.navigateByUrl('/app/dashboard');
+    } else {
+      await this.router.navigateByUrl('/app/dashboard');
+    }
   }
 
   ngOnDestroy(): void {
@@ -59,6 +157,10 @@ export class TopbarComponent implements OnDestroy {
   }
 
   companyName(): string {
+    if (this.isAdmin()) {
+      const name = (this.session as any).adminScopeCompanyName?.();
+      return name || 'Todas as empresas';
+    }
     const u = this.session.user();
     return (u && (u.name ?? u.name)) ?? '';
   }

@@ -19,8 +19,8 @@ export class CargosService {
   async createCargo(input: Partial<Cargo>): Promise<string> {
     // validate unique CBO
     if (!input.cbo) throw new Error('CBO é obrigatório');
-    const exists = await this.repo.findByCbo(input.cbo);
-    if (exists) throw new Error('Já existe um cargo cadastrado com este CBO.');
+    // const exists = await this.repo.findByCbo(input.cbo);
+    // if (exists) throw new Error('Já existe um cargo cadastrado com este CBO.');
 
     const uid = this.getUid();
     const user = await this.usersRepo.get(uid);

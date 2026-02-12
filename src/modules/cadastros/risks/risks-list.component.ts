@@ -191,6 +191,6 @@ export class RisksListComponent implements OnInit, OnDestroy {
   }
 
   evaluationLabel(t: any): string {
-    return t === 'quantitativa' ? 'Quantitativa' : 'Qualitativa';
+    return t === 'qualitativa' ? 'Qualitativo' : 'Quantitativo';
   }
 }

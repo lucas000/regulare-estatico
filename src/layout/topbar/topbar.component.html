@@ -11,16 +11,40 @@
   <span class="spacer"></span>
 
   <div class="topbar-actions">
-    <button mat-icon-button [matBadge]="notificationsCount" [matBadgeHidden]="notificationsCount===0" matBadgeColor="accent" aria-label="Notificações">
-      <mat-icon class="icon-accent">notifications</mat-icon>
-    </button>
+    <!-- ADMIN: seletor de escopo de empresa -->
+    <ng-container *ngIf="isAdmin(); else clienteCompanyName">
+      <mat-spinner *ngIf="changingCompany" diameter="24" style="margin-right: 12px;"></mat-spinner>
+      <mat-form-field appearance="outline" class="company-scope-field" [class.disabled-field]="changingCompany">
+        <mat-label>Escopo: Empresa</mat-label>
+        <mat-select
+          [(ngModel)]="selectedCompanyIdModel"
+          (ngModelChange)="onSelectedCompanyChange($event)"
+          [disabled]="changingCompany"
+        >
+          <mat-option [value]="">ADMIN (todas)</mat-option>
+          <mat-option *ngIf="companiesLoading" disabled>
+            Carregando empresas...
+          </mat-option>
+          <mat-option *ngIf="!companiesLoading && companies.length === 0" disabled>
+            Nenhuma empresa encontrada
+          </mat-option>
+          <mat-option *ngFor="let c of companies" [value]="c.id">{{ c.name }}</mat-option>
+        </mat-select>
+      </mat-form-field>
+    </ng-container>
 
-    <button mat-icon-button [matBadge]="alertsCount" [matBadgeHidden]="alertsCount===0" matBadgeColor="warn" aria-label="Alertas">
-      <mat-icon class="icon-accent">warning</mat-icon>
-    </button>
+    <!-- CLIENTE: apenas mostra o nome da empresa -->
+    <ng-template #clienteCompanyName>
+      <span class="company-name">{{ companyName() }}</span>
+    </ng-template>
 
-    <!-- Company name (from logged user context) -->
-    <span class="company-name">{{ companyName() }}</span>
+      <button mat-icon-button [matBadge]="notificationsCount" [matBadgeHidden]="notificationsCount===0" matBadgeColor="accent" aria-label="Notificações">
+          <mat-icon class="icon-accent">notifications</mat-icon>
+      </button>
+
+      <button mat-icon-button [matBadge]="alertsCount" [matBadgeHidden]="alertsCount===0" matBadgeColor="warn" aria-label="Alertas">
+          <mat-icon class="icon-accent">warning</mat-icon>
+      </button>
 
     <!-- User icon only opens the menu -->
     <button mat-icon-button [matMenuTriggerFor]="userMenu" aria-label="Abrir menu do usuário">

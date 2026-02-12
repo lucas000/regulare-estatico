@@ -119,7 +119,15 @@ export class RisksService {
   async listRisksPaged(term: string, pageSize: number, startAfterDoc?: any) {
     const u = (this.session as any).user?.();
     const isAdmin = this.session.hasRole(['ADMIN'] as any);
-    const companyId = isAdmin ? null : (u?.companyId ?? null);
-    return this.repo.listByNamePaged(companyId, term, pageSize, startAfterDoc);
+
+    if (!isAdmin) {
+      // CLIENTE: sempre filtra pela empresa vinculada
+      const companyId = u?.companyId ?? null;
+      return this.repo.listByNamePaged(companyId, term, pageSize, startAfterDoc);
+    }
+
+    // ADMIN: usa escopo selecionado no topbar (null = todas)
+    const scoped = this.session.adminScopeCompanyId() ?? null;
+    return this.repo.listByNamePaged(scoped, term, pageSize, startAfterDoc);
   }
 }

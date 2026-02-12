@@ -5,11 +5,12 @@ import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angula
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
+import { MatSelectModule } from '@angular/material/select';
 
 @Component({
   selector: 'app-cargo-dialog',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, MatFormFieldModule, MatInputModule, MatButtonModule, MatDialogModule],
+  imports: [CommonModule, ReactiveFormsModule, MatFormFieldModule, MatInputModule, MatButtonModule, MatDialogModule, MatSelectModule],
   template: `
     <h2 mat-dialog-title>Cargo</h2>
     <mat-dialog-content [formGroup]="form">
@@ -26,12 +27,28 @@ import { MatButtonModule } from '@angular/material/button';
       </mat-form-field>
 
       <mat-form-field appearance="fill" style="width:100%">
+        <mat-label>GFIP</mat-label>
+        <mat-select formControlName="gfip">
+          <mat-option [value]="">Em branco</mat-option>
+          <mat-option value="00">00</mat-option>
+          <mat-option value="01">01</mat-option>
+          <mat-option value="02">02</mat-option>
+          <mat-option value="03">03</mat-option>
+          <mat-option value="04">04</mat-option>
+          <mat-option value="05">05</mat-option>
+          <mat-option value="06">06</mat-option>
+          <mat-option value="07">07</mat-option>
+          <mat-option value="08">08</mat-option>
+        </mat-select>
+      </mat-form-field>
+
+      <mat-form-field appearance="fill" style="width:100%">
         <mat-label>Descrição</mat-label>
         <textarea matInput formControlName="description"></textarea>
       </mat-form-field>
 
       <mat-form-field appearance="fill" style="width:100%">
-        <mat-label>Notas</mat-label>
+        <mat-label>Tarefa Prescrita</mat-label>
         <textarea matInput formControlName="notes"></textarea>
       </mat-form-field>
 
@@ -51,6 +68,7 @@ export class CargoDialogComponent {
     this.form = this.fb.group({
       name: ['', [Validators.required]],
       cbo: ['', [Validators.required]],
+      gfip: [''],
       description: [''],
       notes: [''],
     });

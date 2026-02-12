@@ -182,8 +182,9 @@ export class UnitsService {
       }
       return this.repo.listByNamePaged(cid as any, term, pageSize, startAfterDoc);
     }
-    // ADMIN: sem filtro de empresa
-    return this.repo.listByNamePaged(null as any, term, pageSize, startAfterDoc);
+    // ADMIN: se houver escopo selecionado, aplica; senão, todas
+    const scoped = (this.session as any).adminScopeCompanyId?.() ?? null;
+    return this.repo.listByNamePaged((scoped || null) as any, term, pageSize, startAfterDoc);
   }
 
   private getUid(): string {

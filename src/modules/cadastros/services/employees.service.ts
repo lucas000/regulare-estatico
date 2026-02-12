@@ -114,8 +114,12 @@ export class EmployeesService {
   }
 
   async listEmployeesPaged(term: string, pageSize: number, startAfterDoc?: any) {
-    const companyId = this.isAdmin() ? null : (this.getLoggedCompanyId() || null);
-    return this.repo.listByNamePaged(companyId as any, term, pageSize, startAfterDoc);
+    if (!this.isAdmin()) {
+      const cid = this.getLoggedCompanyId() || null;
+      return this.repo.listByNamePaged(cid, term, pageSize, startAfterDoc);
+    }
+    const scoped = (this.session as any).adminScopeCompanyId?.() ?? null;
+    return this.repo.listByNamePaged(scoped, term, pageSize, startAfterDoc);
   }
 
   async getEmployee(id: string) {
@@ -137,7 +141,11 @@ export class EmployeesService {
       this.repo.listByFieldPrefix('cargoName', t, Math.min(80, max)),
       this.repo.listByFieldPrefix('cargoCbo', t, Math.min(80, max)),
       this.companiesRepo.listByNamePaged(t, 20),
-      this.unitsRepo.listByNamePaged(this.isAdmin() ? null : (this.getLoggedCompanyId() || null), t, 20),
+      this.unitsRepo.listByNamePaged(
+        (this.isAdmin() ? ((this.session as any).adminScopeCompanyId?.() ?? null) : (this.getLoggedCompanyId() || null)),
+        t,
+        20
+      ),
       this.cargosRepo.searchByNameOrCbo(t, 20),
     ]);
 
