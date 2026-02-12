@@ -29,7 +29,9 @@ export class SectorsRepository extends BaseFirestoreService<Sector> {
     const col = this.colRef();
     const constraints: any[] = [];
 
-    // Padrão idêntico à listagem de Empresas
+    // CLIENTE: filtra por companyId
+    if (companyId) constraints.push(where('companyId', '==', companyId));
+
     constraints.push(orderBy('name'));
 
     const t = (filter || '').trim();

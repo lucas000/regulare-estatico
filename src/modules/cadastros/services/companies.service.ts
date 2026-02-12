@@ -50,10 +50,24 @@ export class CompaniesService {
     private readonly usersRepo: UsersRepository
   ) {}
 
+  private isAdmin(): boolean {
+    return this.session.hasRole(['ADMIN'] as any);
+  }
+
+  private getLoggedCompanyId(): string {
+    const u = (this.session as any).user?.();
+    return u?.companyId ?? '';
+  }
+
   /**
    * Create company and a CLIENTE user in Firebase Auth + /users in a safe, rollback-capable flow.
    */
   async createCompanyWithClientUser(input: Partial<Company> & { email: string; password?: string }): Promise<string> {
+    // CLIENTE não pode criar empresas
+    if (!this.isAdmin()) {
+      throw new Error('Apenas ADMIN pode criar novas empresas.');
+    }
+
     if (!input.email) throw new Error('Email obrigatório para criar usuário CLIENTE');
 
     const now = new Date().toISOString();
@@ -152,6 +166,10 @@ export class CompaniesService {
   }
 
   async createCompany(input: Partial<Company>): Promise<string> {
+    if (!this.isAdmin()) {
+      throw new Error('Apenas ADMIN pode criar novas empresas.');
+    }
+
     const uid = this.getUid();
     const user = await this.usersRepo.get(uid);
     const audit: AuditUser = { uid, name: user?.name ?? '', email: user?.email ?? '' };
@@ -194,6 +212,14 @@ export class CompaniesService {
   }
 
   async updateCompany(id: string, patch: Partial<Company>): Promise<void> {
+    // CLIENTE só pode editar a própria empresa
+    if (!this.isAdmin()) {
+      const myCompanyId = this.getLoggedCompanyId();
+      if (!myCompanyId || id !== myCompanyId) {
+        throw new Error('Sem permissão para editar esta empresa.');
+      }
+    }
+
     const now = new Date().toISOString();
     const uid = this.getUid();
     const user = await this.usersRepo.get(uid);
@@ -221,19 +247,39 @@ export class CompaniesService {
   }
 
   async setActive(id: string, ativo: boolean): Promise<void> {
+    // Apenas ADMIN pode ativar/inativar empresa
+    if (!this.isAdmin()) {
+      throw new Error('Apenas ADMIN pode ativar/inativar empresas.');
+    }
     await this.repo.updateCompany(id, { status: ativo ? 'ativo' : 'inativo' });
   }
 
+  async listCompaniesPaged(term: string, pageSize: number, startAfterDoc?: any) {
+    // CLIENTE: listar somente a própria empresa
+    if (!this.isAdmin()) {
+      const myCompanyId = this.getLoggedCompanyId();
+      if (!myCompanyId) return { docs: [], lastDoc: null };
+      const c = await this.repo.getById(myCompanyId);
+      return { docs: c ? [c] : [], lastDoc: null };
+    }
+    return this.repo.listByNamePaged(term, pageSize, startAfterDoc);
+  }
+
   async listCompanies(): Promise<Company[]> {
+    if (!this.isAdmin()) {
+      const myCompanyId = this.getLoggedCompanyId();
+      const c = myCompanyId ? await this.repo.getById(myCompanyId) : null;
+      return c ? [c] : [];
+    }
     return this.repo.listAll();
   }
 
   async getCompany(id: string): Promise<Company | null> {
+    if (!this.isAdmin()) {
+      const myCompanyId = this.getLoggedCompanyId();
+      if (!myCompanyId || id !== myCompanyId) return null;
+    }
     return this.repo.getById(id);
-  }
-
-  async listCompaniesPaged(term: string, pageSize: number, startAfterDoc?: any) {
-    return this.repo.listByNamePaged(term, pageSize, startAfterDoc);
   }
 
   private getUid(): string {

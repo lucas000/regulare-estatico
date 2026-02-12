@@ -65,7 +65,7 @@ export class EmployeesListComponent implements OnInit, OnDestroy {
     this.dataSource = new MatTableDataSource<Employee>([]);
   }
 
-  get canEdit(): boolean { return this.session.hasRole(['ADMIN'] as any); }
+  get canEdit(): boolean { return this.session.hasRole(['ADMIN', 'CLIENTE'] as any); }
 
   private companiesMap = new Map<string, string>();
   private unitsMap = new Map<string, string>();

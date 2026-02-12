@@ -10,6 +10,7 @@ import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { Subscription } from 'rxjs';
 import { CompaniesService } from '../services/companies.service';
 import { UnitsRepository } from '../repositories/units.repository';
+import { SessionService } from '../../../core/services/session.service';
 
 function toUpperSafe(v: any): string {
   return String(v ?? '').trim().toUpperCase();
@@ -44,6 +45,8 @@ export class SectorDialogComponent implements OnInit, OnDestroy {
   private readonly data = inject(MAT_DIALOG_DATA, { optional: true });
   private readonly companiesService = inject(CompaniesService);
   private readonly unitsRepo = inject(UnitsRepository);
+  private readonly session = inject(SessionService);
+  isCliente: boolean = this.session.hasRole(['CLIENTE'] as any);
 
   statusOptions = [
     { value: 'active', label: 'Active' },
@@ -61,6 +64,16 @@ export class SectorDialogComponent implements OnInit, OnDestroy {
       notes: [''],
     });
     if (this.data) this.form.patchValue(this.data as any);
+
+    // CLIENTE: fixa empresa padrão (do usuário) e desabilita edição
+    if (this.isCliente) {
+      const u = (this.session as any).user?.();
+      const companyId = u?.companyId ?? '';
+      if (companyId) {
+        this.form.patchValue({ companyId }, { emitEvent: true });
+      }
+      this.form.get('companyId')?.disable({ emitEvent: false });
+    }
   }
 
   ngOnInit(): void {

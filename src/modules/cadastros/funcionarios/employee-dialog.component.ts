@@ -11,6 +11,8 @@ import { CompaniesRepository } from '../repositories/companies.repository';
 import { UnitsRepository } from '../repositories/units.repository';
 import { CargosRepository } from '../repositories/cargos.repository';
 import { SectorsFiltersRepository } from '../repositories/sectors-filters.repository';
+import { SessionService } from '../../../core/services/session.service';
+import { CompaniesService } from '../services/companies.service';
 import { debounceTime, distinctUntilChanged, switchMap } from 'rxjs/operators';
 import { Observable, of } from 'rxjs';
 
@@ -34,7 +36,7 @@ import { Observable, of } from 'rxjs';
       <!-- Identificação / Vínculos -->
       <mat-form-field appearance="fill" class="full">
         <mat-label>Empreendimento (PF/PJ)</mat-label>
-        <mat-select formControlName="companyId">
+        <mat-select formControlName="companyId" [disabled]="isCliente">
           <mat-option *ngIf="companiesLoading" disabled>Carregando empreendimentos...</mat-option>
           <mat-option *ngFor="let c of companies" [value]="c.id">{{ c.name }}</mat-option>
         </mat-select>
@@ -197,6 +199,9 @@ export class EmployeeDialogComponent {
   private readonly cargosRepo = inject(CargosRepository);
   private readonly cd = inject(ChangeDetectorRef);
   private readonly sectorsRepo = inject(SectorsFiltersRepository);
+  private readonly session = inject(SessionService);
+  private readonly companiesService = inject(CompaniesService);
+  isCliente: boolean = this.session.hasRole(['CLIENTE'] as any);
 
   companies: any[] = [];
   units: any[] = [];
@@ -243,6 +248,16 @@ export class EmployeeDialogComponent {
       if ((this.data as any).cargoName) {
         this.cargoCtrl.setValue(`${(this.data as any).cargoName} — ${(this.data as any).cargoCbo}`);
       }
+    }
+
+    // CLIENTE: companyId fixo no formulário
+    if (this.isCliente) {
+      const u = (this.session as any).user?.();
+      const companyId = u?.companyId ?? '';
+      if (companyId) {
+        this.form.patchValue({ companyId }, { emitEvent: true });
+      }
+      this.form.get('companyId')?.disable({ emitEvent: false });
     }
 
     // Carrega empresas e (se edição) unidades/setores antes de liberar a UI
@@ -354,7 +369,8 @@ export class EmployeeDialogComponent {
   }
 
   private async loadCompanies() {
-    this.companies = await this.companiesRepo.listAll(500);
+    // Use service to respect CLIENTE scoping
+    this.companies = await this.companiesService.listCompanies();
     this.cd.markForCheck();
   }
 

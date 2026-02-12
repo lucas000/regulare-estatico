@@ -12,11 +12,13 @@ import { MatAutocompleteModule } from '@angular/material/autocomplete';
 import { MatIconModule } from '@angular/material/icon';
 import { MatChipsModule } from '@angular/material/chips';
 import { CompaniesRepository } from '../repositories/companies.repository';
+import { CompaniesService } from '../services/companies.service';
 import { Company, CompanyCnae } from '../models/company.model';
 import { LocalidadesService, Estado, Municipio } from '../../../core/services/localidades.service';
 import { Unit, DocumentType } from '../models/unit.model';
 import { CnaeService, Cnae } from '../../../core/services/cnae.service';
 import { Subscription, debounceTime, distinctUntilChanged, switchMap, of, catchError, finalize } from 'rxjs';
+import { SessionService } from '../../../core/services/session.service';
 
 function cnaeToCompanyCnae(c: Cnae | CompanyCnae | string | null | undefined): CompanyCnae {
   if (!c) return { id: '', descricao: '', observacoes: [] } as any;
@@ -54,7 +56,7 @@ function toUpperSafe(v: any): string {
     <mat-dialog-content [formGroup]="form">
       <mat-form-field appearance="fill" style="width:100%">
         <mat-label>Empreendimento (PF/PJ)</mat-label>
-        <mat-select formControlName="companyId">
+        <mat-select formControlName="companyId" [disabled]="isCliente">
           <mat-option *ngFor="let c of companies" [value]="c.id">{{ c.name }}</mat-option>
         </mat-select>
         <mat-error *ngIf="(submitted || form.controls['companyId']?.touched) && form.controls['companyId']?.invalid">Empresa é obrigatória</mat-error>
@@ -227,6 +229,9 @@ export class UnitDialogComponent implements OnInit, OnDestroy {
   private readonly localidades = inject(LocalidadesService);
   private readonly cd = inject(ChangeDetectorRef);
   private readonly cnaeService = inject(CnaeService);
+  private readonly session = inject(SessionService);
+  private readonly companiesService = inject(CompaniesService);
+  isCliente: boolean = this.session.hasRole(['CLIENTE'] as any);
   companies: Company[] = [];
   estados: Estado[] = [];
   municipios: Municipio[] = [];
@@ -315,6 +320,17 @@ export class UnitDialogComponent implements OnInit, OnDestroy {
       if (!uf) return;
       this.loadMunicipios(uf);
     });
+
+    // CLIENTE: companyId fixo
+    const isCliente = this.session.hasRole(['CLIENTE'] as any);
+    if (isCliente) {
+      const u = (this.session as any).user?.();
+      const companyId = u?.companyId ?? '';
+      if (companyId) {
+        this.form.patchValue({ companyId }, { emitEvent: true });
+      }
+      this.form.get('companyId')?.disable({ emitEvent: false });
+    }
   }
 
   ngOnInit(): void {
@@ -380,8 +396,9 @@ export class UnitDialogComponent implements OnInit, OnDestroy {
   }
 
   private async loadCompanies() {
-    const all = await this.companiesRepo.listAll();
-    this.companies = all.filter((c) => c.status === 'ativo');
+    // Use service to respect CLIENTE scoping (returns only own company for CLIENTE)
+    const res = await this.companiesService.listCompanies();
+    this.companies = (res || []).filter((c: any) => (c as any).status === 'ativo' || !(c as any).status);
     if (this.data && (this.data as any).companyId) {
       this.form.patchValue({ companyId: (this.data as any).companyId });
     }
@@ -483,12 +500,8 @@ export class UnitDialogComponent implements OnInit, OnDestroy {
 
     const raw = this.form.getRawValue() as any;
 
-    const payload: Partial<Unit> = {
-      companyId: raw.companyId,
-      name: toUpperSafe(raw.name),
-      documentType: raw.documentType,
-      documentNumber: raw.documentNumber,
-
+    const payload = {
+      ...this.form.getRawValue(),
       // Persistência: armazenar objeto completo (id, descricao, observacoes)
       cnaeMain: this.selectedCnaeMain!,
       cnaeSecondary: this.selectedCnaeSecondary,

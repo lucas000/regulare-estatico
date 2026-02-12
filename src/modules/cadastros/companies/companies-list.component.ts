@@ -164,7 +164,15 @@ export class CompaniesListComponent implements OnInit, OnDestroy {
     }
   }
 
+  get isAdmin(): boolean {
+    return this.session.hasRole(['ADMIN'] as any);
+  }
+
   newCompany() {
+    if (!this.isAdmin) {
+      this.snack.open('Você não tem permissão para criar novas empresas.', 'Fechar', { duration: 3000 });
+      return;
+    }
     const ref = this.dialog.open(CompanyDialogComponent, { width: '600px' });
     ref.afterClosed().subscribe(async (res: any) => {
       if (!res) return;
@@ -185,6 +193,10 @@ export class CompaniesListComponent implements OnInit, OnDestroy {
   }
 
   toggleActive(c: Company) {
+    if (!this.isAdmin) {
+      this.snack.open('Você não tem permissão para ativar/inativar empresas.', 'Fechar', { duration: 3000 });
+      return;
+    }
     this.companiesService.setActive(c.id, c.status !== 'ativo').then(() => {
       const msg = c.status !== 'ativo' ? 'Empresa ativada com sucesso' : 'Empresa inativada com sucesso';
       this.snack.open(msg, 'Fechar', { duration: 3000 });

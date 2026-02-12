@@ -12,7 +12,20 @@ export class SectorsService {
     private readonly usersRepo: UsersRepository
   ) {}
 
+  private isAdmin(): boolean {
+    return this.session.hasRole(['ADMIN'] as any);
+  }
+
+  private getLoggedCompanyId(): string {
+    const u = (this.session as any).user?.();
+    return u?.companyId ?? '';
+  }
+
   async createSector(input: Partial<Sector>): Promise<string> {
+    const loggedCompanyId = this.getLoggedCompanyId();
+    if (!this.isAdmin()) {
+      (input as any).companyId = loggedCompanyId;
+    }
     const uid = this.getUid();
     const user = await this.usersRepo.get(uid);
     const audit: AuditUser = { uid, name: user?.name ?? '', email: user?.email ?? '' };
@@ -20,7 +33,7 @@ export class SectorsService {
     const id = `sector_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
     const doc: Sector = {
       id,
-      companyId: input.companyId ?? '',
+      companyId: this.isAdmin() ? (input.companyId ?? '') : (loggedCompanyId ?? ''),
       unitId: input.unitId ?? '',
       name: input.name ?? '',
       workEnvironmentDescription: input.workEnvironmentDescription ?? '',
@@ -37,6 +50,11 @@ export class SectorsService {
   }
 
   async updateSector(id: string, patch: Partial<Sector>): Promise<void> {
+    const loggedCompanyId = this.getLoggedCompanyId();
+    if (!this.isAdmin()) {
+      delete (patch as any).companyId;
+      (patch as any).companyId = loggedCompanyId;
+    }
     const now = new Date().toISOString();
     const uid = this.getUid();
     const user = await this.usersRepo.get(uid);
@@ -53,7 +71,8 @@ export class SectorsService {
   }
 
   async listSectorsPaged(term: string, pageSize: number, startAfterDoc?: any) {
-    return this.repo.listPaged('', '', term, pageSize, startAfterDoc);
+    const companyId = this.isAdmin() ? '' : this.getLoggedCompanyId();
+    return this.repo.listPaged(companyId || '', '', term, pageSize, startAfterDoc);
   }
 
   private getUid(): string {

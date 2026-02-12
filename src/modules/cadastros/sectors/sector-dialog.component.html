@@ -8,7 +8,7 @@
   <div class="grid">
     <mat-form-field appearance="fill" class="full">
       <mat-label>Empreendimento (PF/PJ)</mat-label>
-      <mat-select formControlName="companyId">
+      <mat-select formControlName="companyId" [disabled]="isCliente">
         <mat-option *ngFor="let c of companies" [value]="c.id">{{ c.razaoSocial || c.name }}</mat-option>
       </mat-select>
       <mat-error *ngIf="form.get('companyId')?.touched && form.get('companyId')?.invalid">Obrigatório</mat-error>

@@ -6,7 +6,7 @@
       </mat-form-field>
     </div>
     <div>
-      <button mat-flat-button color="primary" (click)="newCompany()">Novo Empreendimento</button>
+      <button *ngIf="isAdmin" mat-flat-button color="primary" (click)="newCompany()">Novo Empreendimento</button>
     </div>
   </div>
 
@@ -57,7 +57,7 @@
     <ng-container matColumnDef="acoes">
       <th mat-header-cell *matHeaderCellDef> Ações </th>
       <td mat-cell *matCellDef="let element">
-          <button mat-icon-button (click)="toggleActive(element)"><mat-icon>{{element.status==='ativo'?'toggle_on':'toggle_off'}}</mat-icon></button>
+          <button *ngIf="isAdmin" mat-icon-button (click)="toggleActive(element)"><mat-icon>{{element.status==='ativo'?'toggle_on':'toggle_off'}}</mat-icon></button>
           <button mat-icon-button (click)="editCompany(element)"><mat-icon>edit</mat-icon></button>
       </td>
     </ng-container>

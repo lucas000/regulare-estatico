@@ -41,7 +41,7 @@ export const routes: Routes = [
             {
                 path: 'cadastros',
                 canActivate: [RoleGuard],
-                data: {roles: ['ADMIN'] as const},
+                data: {roles: ['ADMIN', 'CLIENTE'] as const},
                 loadChildren: () => import('./modules/cadastros/cadastros.routes').then(m => m.routes)
             },
             {

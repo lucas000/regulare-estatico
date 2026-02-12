@@ -69,15 +69,19 @@ export class CadastrosComponent implements AfterViewInit {
   employeesCompPromise: Promise<any> | null = null;
 
   canSee(tab: 'EMPRESAS' | 'UNIDADES' | 'FUNCIONARIOS' | 'CARGOS' | 'SETORES' | 'RISCOS' | 'EPIS') {
-    // Respect rules: CLIENTE cannot access module at all; ADMIN sees all; CONSULTOR sees all except empresas
     const isAdmin = this.session.hasRole(['ADMIN'] as any);
-    const isConsultor = this.session.hasRole(['CONSULTOR'] as any);
     const isCliente = this.session.hasRole(['CLIENTE'] as any);
-    if (isCliente) return false;
-    if (tab === 'EMPRESAS') return isAdmin;
-    // Funcionários: remove per-tab role restriction — available whenever the module is accessible (i.e., not CLIENTE)
-    if (tab === 'FUNCIONARIOS') return true;
-    return isAdmin || isConsultor;
+
+    // ADMIN: acesso total
+    if (isAdmin) return true;
+
+    // CLIENTE: acesso somente dentro de Cadastros (Empresas, Unidades, Setores, Funcionários)
+    if (isCliente) {
+      return tab === 'EMPRESAS' || tab === 'UNIDADES' || tab === 'SETORES' || tab === 'FUNCIONARIOS';
+    }
+
+    // Outros perfis (ex.: CONSULTOR) ficam sem acesso por este novo requisito
+    return false;
   }
 
   ngAfterViewInit(): void {

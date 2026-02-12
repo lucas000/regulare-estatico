@@ -41,7 +41,22 @@ export class UnitsService {
     private readonly usersRepo: UsersRepository
   ) {}
 
+  private isAdmin(): boolean {
+    return this.session.hasRole(['ADMIN'] as any);
+  }
+
+  private getLoggedCompanyId(): string {
+    const u = (this.session as any).user?.();
+    return u?.companyId ?? '';
+  }
+
   async createUnit(input: Partial<Unit>): Promise<string> {
+    const loggedCompanyId = this.getLoggedCompanyId();
+    // CLIENTE: sempre persistir companyId do usuário logado
+    if (!this.isAdmin()) {
+      (input as any).companyId = loggedCompanyId;
+    }
+
     const uid = this.getUid();
     const user = await this.usersRepo.get(uid);
     const audit: AuditUser = { uid, name: user?.name ?? '', email: user?.email ?? '' };
@@ -56,7 +71,7 @@ export class UnitsService {
 
     const doc: Unit = {
       id,
-      companyId: input.companyId ?? '',
+      companyId: (this.isAdmin() ? (input.companyId ?? '') : (loggedCompanyId ?? '')),
       name: input.name ?? '',
 
       documentType: (input.documentType ?? 'CNPJ') as any,
@@ -97,6 +112,14 @@ export class UnitsService {
   }
 
   async updateUnit(id: string, patch: Partial<Unit>): Promise<void> {
+    const loggedCompanyId = this.getLoggedCompanyId();
+
+    // CLIENTE: não permite alterar companyId e sempre persistir o companyId do usuário
+    if (!this.isAdmin()) {
+      delete (patch as any).companyId;
+      (patch as any).companyId = loggedCompanyId;
+    }
+
     const now = new Date().toISOString();
     const uid = this.getUid();
     const user = await this.usersRepo.get(uid);
@@ -150,7 +173,17 @@ export class UnitsService {
   }
 
   async listUnitsPaged(term: string, pageSize: number, startAfterDoc?: any) {
-    return this.repo.listByNamePaged(term, pageSize, startAfterDoc);
+    // CLIENTE: filtrar por companyId no backend e bloquear quando não houver vínculo
+    if (!this.isAdmin()) {
+      const cid = this.getLoggedCompanyId();
+      if (!cid) {
+        // Sem empresa vinculada: não listar nada para CLIENTE
+        return { docs: [], lastDoc: null } as any;
+      }
+      return this.repo.listByNamePaged(cid as any, term, pageSize, startAfterDoc);
+    }
+    // ADMIN: sem filtro de empresa
+    return this.repo.listByNamePaged(null as any, term, pageSize, startAfterDoc);
   }
 
   private getUid(): string {

@@ -29,10 +29,13 @@ export class UnitsRepository extends BaseFirestoreService<Unit> {
     return this.delete(id);
   }
 
-  // Paged listing by name with optional startAfter document
-  async listByNamePaged(term: string, pageSize: number, startAfterDoc?: any) {
+  // Paged listing by name with optional companyId filter and startAfter document
+  async listByNamePaged(companyId: string | null, term: string, pageSize: number, startAfterDoc?: any) {
     const col = this.colRef();
     const constraints: any[] = [];
+
+    if (companyId) constraints.push(where('companyId', '==', companyId));
+
     constraints.push(orderBy('name'));
     if (term && term.trim().length) {
       const t = term.trim();
@@ -44,7 +47,7 @@ export class UnitsRepository extends BaseFirestoreService<Unit> {
     const q = query(col, ...constraints);
     const snap = await getDocs(q);
     const docs = snap.docs.map(d => d.data());
-    const lastDoc = snap.docs[snap.docs.length - 1] ?? null;
+    const lastDoc = snap.docs.at(-1) ?? null;
     return { docs, lastDoc };
   }
 }

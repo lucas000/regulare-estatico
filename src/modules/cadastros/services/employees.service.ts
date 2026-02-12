@@ -25,7 +25,21 @@ export class EmployeesService {
     return u?.id ?? '';
   }
 
+  private isAdmin(): boolean {
+    return this.session.hasRole(['ADMIN'] as any);
+  }
+
+  private getLoggedCompanyId(): string {
+    const u = (this.session as any).user?.();
+    return u?.companyId ?? '';
+  }
+
   async createEmployee(input: Partial<Employee>): Promise<string> {
+    // Force company for CLIENTE
+    if (!this.isAdmin()) {
+      (input as any).companyId = this.getLoggedCompanyId();
+    }
+
     // validate required fields
     if (!input.companyId) throw new Error('companyId is required');
     if (!input.unitId) throw new Error('unitId is required');
@@ -46,22 +60,19 @@ export class EmployeesService {
 
     const doc: Employee = {
       id,
-      companyId: input.companyId!,
+      companyId: (this.isAdmin() ? (input.companyId ?? '') : (this.getLoggedCompanyId() || ''))!,
       unitId: input.unitId!,
       sectorId: input.sectorId!,
       name: input.name!,
       cpf: input.cpf ?? '',
       cargoId: input.cargoId!,
-      cargoName: input.cargoName ?? input['cargoName'] ?? '',
-      cargoCbo: input.cargoCbo ?? input['cargoCbo'] ?? '',
+      cargoName: input.cargoName ?? (input as any)['cargoName'] ?? '',
+      cargoCbo: input.cargoCbo ?? (input as any)['cargoCbo'] ?? '',
 
       // new fields
       esocialRegistration: input.esocialRegistration!,
       esocialCategory: input.esocialCategory!,
       admissionDate: input.admissionDate!,
-
-      // optional
-      jobDescription: input.jobDescription ?? '',
 
       // optionals (avoid undefined to keep Firestore happy)
       phone: input.phone ?? '',
@@ -84,16 +95,17 @@ export class EmployeesService {
     const updatedBy = { uid, name: user?.name ?? '', email: user?.email ?? '' };
     const now = new Date().toISOString();
 
-    // Avoid sending undefined to Firestore
-    const safePatch: any = { ...patch };
-    Object.keys(safePatch).forEach((k) => safePatch[k] === undefined && delete safePatch[k]);
-
-    // Normalize optional new field (avoid undefined)
-    if ('jobDescription' in safePatch) {
-      safePatch.jobDescription = safePatch.jobDescription ?? '';
+    // CLIENTE: não permitir trocar companyId e sempre garantir companyId do logado
+    if (!this.isAdmin()) {
+      delete (patch as any).companyId;
+      (patch as any).companyId = this.getLoggedCompanyId();
     }
 
-    await this.repo.updateEmployee(id, { ...safePatch, updatedAt: now, updatedBy } as Partial<Employee>);
+    // Avoid sending undefined to Firestore
+    const safePatch: any = { ...patch, updatedAt: now, updatedBy };
+    Object.keys(safePatch).forEach((k) => safePatch[k] === undefined && delete safePatch[k]);
+
+    await this.repo.updateEmployee(id, safePatch);
   }
 
   async setActive(id: string, ativo: boolean) {
@@ -102,7 +114,8 @@ export class EmployeesService {
   }
 
   async listEmployeesPaged(term: string, pageSize: number, startAfterDoc?: any) {
-    return this.repo.listByNamePaged(term, pageSize, startAfterDoc);
+    const companyId = this.isAdmin() ? null : (this.getLoggedCompanyId() || null);
+    return this.repo.listByNamePaged(companyId as any, term, pageSize, startAfterDoc);
   }
 
   async getEmployee(id: string) {
@@ -124,7 +137,7 @@ export class EmployeesService {
       this.repo.listByFieldPrefix('cargoName', t, Math.min(80, max)),
       this.repo.listByFieldPrefix('cargoCbo', t, Math.min(80, max)),
       this.companiesRepo.listByNamePaged(t, 20),
-      this.unitsRepo.listByNamePaged(t, 20),
+      this.unitsRepo.listByNamePaged(this.isAdmin() ? null : (this.getLoggedCompanyId() || null), t, 20),
       this.cargosRepo.searchByNameOrCbo(t, 20),
     ]);
 
