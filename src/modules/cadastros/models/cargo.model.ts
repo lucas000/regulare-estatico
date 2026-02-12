@@ -4,8 +4,10 @@ export interface Cargo {
   id: string;
   name: string;
   cbo: string;
+  gfip?: string;
   description?: string;
   notes?: string;
+  riskIds?: string[];
   status?: 'ativo' | 'inativo';
   createdAt: string;
   updatedAt?: string;

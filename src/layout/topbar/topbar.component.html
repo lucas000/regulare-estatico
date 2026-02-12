@@ -15,8 +15,8 @@
     <ng-container *ngIf="isAdmin(); else clienteCompanyName">
       <mat-spinner *ngIf="changingCompany" diameter="24" style="margin-right: 12px;"></mat-spinner>
       <mat-form-field appearance="outline" class="company-scope-field" [class.disabled-field]="changingCompany">
-        <mat-label>Escopo: Empresa</mat-label>
-        <mat-select
+        <mat-label style="color: white">Escopo: Empresa</mat-label>
+        <mat-select style="color: white"
           [(ngModel)]="selectedCompanyIdModel"
           (ngModelChange)="onSelectedCompanyChange($event)"
           [disabled]="changingCompany"

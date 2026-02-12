@@ -13,7 +13,7 @@ mat-toolbar { background-color: var(--color-primary); color: var(--color-bg) }
 .title-icon { opacity:0.85 }
 .title-text { font-size:1.125rem; font-weight:600 }
 
-.topbar-actions { display:flex; align-items:center; gap:8px }
+.topbar-actions { display:flex; align-items:center; gap:8px ; margin-top: 5px }
 
 .status-badge { padding: 4px 8px; border-radius: 8px; font-weight: 600; }
 .status-ativo { background: #1b8e3a; color: white; }
