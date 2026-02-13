@@ -1,0 +1,122 @@
+<div class="page-container">
+  <!-- Filtros -->
+  <mat-card class="filters-card">
+    <div class="filters-row">
+      <!-- Empresa -->
+      <mat-form-field appearance="outline" class="filter-field">
+        <mat-label>Empresa</mat-label>
+        <mat-select [formControl]="companyFilter">
+          <mat-option [value]="''">Todas</mat-option>
+          <mat-option *ngFor="let c of companies" [value]="c.id">{{ c.razaoSocial || c.name }}</mat-option>
+        </mat-select>
+      </mat-form-field>
+
+      <!-- Status -->
+      <mat-form-field appearance="outline" class="filter-field">
+        <mat-label>Status</mat-label>
+        <mat-select [formControl]="statusFilter">
+          <mat-option [value]="''">Todos</mat-option>
+          <mat-option value="pendente">Pendente</mat-option>
+          <mat-option value="a_vencer">A vencer</mat-option>
+          <mat-option value="cumprida">Cumprida</mat-option>
+          <mat-option value="vencida">Vencida</mat-option>
+        </mat-select>
+      </mat-form-field>
+
+<!--      &lt;!&ndash; Busca &ndash;&gt;-->
+<!--      <mat-form-field appearance="outline" class="filter-field search-field">-->
+<!--        <mat-label>Buscar por descrição</mat-label>-->
+<!--        <input matInput [formControl]="searchControl" placeholder="Digite para buscar..." />-->
+<!--        <mat-icon matSuffix>search</mat-icon>-->
+<!--      </mat-form-field>-->
+    </div>
+  </mat-card>
+
+  <!-- Loading -->
+  <mat-progress-bar *ngIf="loading" mode="indeterminate"></mat-progress-bar>
+
+  <!-- Tabela -->
+  <div class="table-container">
+    <table mat-table [dataSource]="dataSource" class="mat-elevation-z2 full-width">
+      <!-- Empresa -->
+      <ng-container matColumnDef="company">
+        <th mat-header-cell *matHeaderCellDef>Empresa</th>
+        <td mat-cell *matCellDef="let el">{{ getCompanyName(el.companyId) }}</td>
+      </ng-container>
+
+      <!-- Descrição -->
+      <ng-container matColumnDef="description">
+        <th mat-header-cell *matHeaderCellDef>Descrição</th>
+        <td mat-cell *matCellDef="let el">{{ el.description }}</td>
+      </ng-container>
+
+      <!-- Prazo -->
+      <ng-container matColumnDef="dueDate">
+        <th mat-header-cell *matHeaderCellDef>Prazo</th>
+        <td mat-cell *matCellDef="let el">{{ el.dueDate }}</td>
+      </ng-container>
+
+      <!-- Dias Restantes -->
+      <ng-container matColumnDef="daysRemaining">
+        <th mat-header-cell *matHeaderCellDef>Dias Restantes</th>
+        <td mat-cell *matCellDef="let el">
+          <span [ngClass]="getDaysClass(el)">{{ getDaysRemaining(el) }}</span>
+        </td>
+      </ng-container>
+
+      <!-- Status -->
+      <ng-container matColumnDef="status">
+        <th mat-header-cell *matHeaderCellDef>Status</th>
+        <td mat-cell *matCellDef="let el">
+          <span class="status-badge" [ngClass]="getStatusClass(el.status)">
+            {{ getStatusLabel(el.status) }}
+          </span>
+        </td>
+      </ng-container>
+
+      <!-- Evidência -->
+      <ng-container matColumnDef="evidence">
+        <th mat-header-cell *matHeaderCellDef>Evidência</th>
+        <td mat-cell *matCellDef="let el">
+          <button mat-icon-button *ngIf="el.evidenceUrl" matTooltip="Ver evidência" (click)="openEvidence(el)">
+            <mat-icon>attach_file</mat-icon>
+          </button>
+          <span *ngIf="!el.evidenceUrl">-</span>
+        </td>
+      </ng-container>
+
+      <!-- Ações -->
+      <ng-container matColumnDef="acoes">
+        <th mat-header-cell *matHeaderCellDef>Ações</th>
+        <td mat-cell *matCellDef="let el">
+          <button
+            mat-icon-button
+            matTooltip="Marcar como cumprida"
+            (click)="markAsCumprida(el)"
+            [disabled]="el.status === 'cumprida'"
+          >
+            <mat-icon>check_circle</mat-icon>
+          </button>
+        </td>
+      </ng-container>
+
+      <tr mat-header-row *matHeaderRowDef="columns"></tr>
+      <tr mat-row *matRowDef="let row; columns: columns;" [ngClass]="{'row-vencida': row.status === 'vencida', 'row-a-vencer': row.status === 'a_vencer'}"></tr>
+    </table>
+
+    <!-- Empty state -->
+    <div *ngIf="!loading && dataSource.data.length === 0" class="empty-state">
+      <mat-icon>checklist</mat-icon>
+      <p>Nenhuma condicionante encontrada</p>
+    </div>
+  </div>
+
+  <!-- Paginação -->
+  <mat-paginator
+    [pageSize]="pageSize"
+    [pageSizeOptions]="[30, 50, 100]"
+    [length]="total"
+    (page)="onPage($event)"
+    showFirstLastButtons>
+  </mat-paginator>
+</div>

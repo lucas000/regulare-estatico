@@ -45,7 +45,7 @@ export class EquipmentsListComponent implements OnInit, OnDestroy {
   private readonly cd = inject(ChangeDetectorRef);
   private readonly snack = inject(MatSnackBar);
 
-  columns = ['name', 'type', 'hasCertification', 'validUntil', 'status', 'acoes'];
+  columns = ['name', 'type', 'hasCertification', 'certificationNumber', 'validUntil',  'status', 'acoes'];
   items: Equipment[] = [];
   dataSource = new MatTableDataSource<Equipment>([]);
 

@@ -165,12 +165,13 @@ import { Risk } from '../models/risk.model';
       font-style: italic;
     }
 
-    /* Cores por grupo de risco */
-    .risk-fisico { background-color: #1976d2; }
-    .risk-quimico { background-color: #f57c00; }
-    .risk-biologico { background-color: #388e3c; }
-    .risk-ergonomico { background-color: #7b1fa2; }
-    .risk-acidente { background-color: #d32f2f; }
+    /* Cores por grupo de risco (ajustadas conforme solicitação)
+       Acidentes - Azul; Biológicos - Marrom; Ergonômico - Amarelo; Físico - Verde; Químico - Vermelho */
+    .risk-fisico { background-color: #388e3c; }
+    .risk-quimico { background-color: #d32f2f; }
+    .risk-biologico { background-color: #795548; }
+    .risk-ergonomico { background-color: #fbc02d; }
+    .risk-acidente { background-color: #1976d2; }
     .risk-psicossocial { background-color: #616161; }
   `],
   changeDetection: ChangeDetectionStrategy.OnPush,

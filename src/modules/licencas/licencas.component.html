@@ -1,0 +1,150 @@
+<div class="page-container">
+  <!-- Filtros -->
+  <mat-card class="filters-card">
+    <div class="filters-row">
+      <!-- Empresa -->
+      <mat-form-field appearance="outline" class="filter-field">
+        <mat-label>Empresa</mat-label>
+        <mat-select [formControl]="companyFilter">
+          <mat-option [value]="''">Todas</mat-option>
+          <mat-option *ngFor="let c of companies" [value]="c.id">{{ c.razaoSocial || c.name }}</mat-option>
+        </mat-select>
+      </mat-form-field>
+
+      <!-- Unidade -->
+      <mat-form-field appearance="outline" class="filter-field">
+        <mat-label>Unidade</mat-label>
+        <mat-select [formControl]="unitFilter">
+          <mat-option [value]="''">Todas</mat-option>
+          <mat-option *ngFor="let u of units" [value]="u.id">{{ u.name }}</mat-option>
+        </mat-select>
+      </mat-form-field>
+
+      <!-- Tipo de Licença -->
+      <mat-form-field appearance="outline" class="filter-field">
+        <mat-label>Tipo de Licença</mat-label>
+        <mat-select [formControl]="typeFilter">
+          <mat-option [value]="''">Todos</mat-option>
+          <mat-option *ngFor="let t of licenseTypes" [value]="t">{{ t }}</mat-option>
+        </mat-select>
+      </mat-form-field>
+
+      <!-- Status -->
+      <mat-form-field appearance="outline" class="filter-field">
+        <mat-label>Status</mat-label>
+        <mat-select [formControl]="statusFilter">
+          <mat-option [value]="''">Todos</mat-option>
+          <mat-option value="em_dia">Em dia</mat-option>
+          <mat-option value="a_vencer">A vencer</mat-option>
+          <mat-option value="vencida">Vencida</mat-option>
+        </mat-select>
+      </mat-form-field>
+
+      <!-- Botão Nova Licença -->
+      <div class="filter-actions">
+        <button mat-flat-button color="accent" (click)="newLicense()">
+          <mat-icon>add</mat-icon> Nova Licença
+        </button>
+      </div>
+    </div>
+  </mat-card>
+
+  <!-- Loading -->
+  <mat-progress-bar *ngIf="loading" mode="indeterminate"></mat-progress-bar>
+
+  <!-- Tabela de Licenças -->
+  <div class="table-container">
+    <table mat-table [dataSource]="dataSource" class="mat-elevation-z2 full-width">
+      <!-- Empresa -->
+      <ng-container matColumnDef="company">
+        <th mat-header-cell *matHeaderCellDef>Empresa</th>
+        <td mat-cell *matCellDef="let el">{{ getCompanyName(el.companyId) }}</td>
+      </ng-container>
+
+      <!-- Tipo -->
+      <ng-container matColumnDef="documentType">
+        <th mat-header-cell *matHeaderCellDef>Tipo</th>
+        <td mat-cell *matCellDef="let el">{{ el.documentType }}</td>
+      </ng-container>
+
+      <!-- Nº Documento -->
+      <ng-container matColumnDef="documentNumber">
+        <th mat-header-cell *matHeaderCellDef>Nº Documento</th>
+        <td mat-cell *matCellDef="let el">{{ el.documentNumber }}</td>
+      </ng-container>
+
+      <!-- Órgão -->
+      <ng-container matColumnDef="issuingAgency">
+        <th mat-header-cell *matHeaderCellDef>Órgão Emissor</th>
+        <td mat-cell *matCellDef="let el">{{ el.issuingAgency }}</td>
+      </ng-container>
+
+      <!-- Emissão -->
+      <ng-container matColumnDef="issueDate">
+        <th mat-header-cell *matHeaderCellDef>Emissão</th>
+        <td mat-cell *matCellDef="let el">{{ el.issueDate }}</td>
+      </ng-container>
+
+      <!-- Vencimento -->
+      <ng-container matColumnDef="expirationDate">
+        <th mat-header-cell *matHeaderCellDef>Vencimento</th>
+        <td mat-cell *matCellDef="let el">{{ el.expirationDate }}</td>
+      </ng-container>
+
+      <!-- Dias para vencer -->
+      <ng-container matColumnDef="daysRemaining">
+        <th mat-header-cell *matHeaderCellDef>Dias Restantes</th>
+        <td mat-cell *matCellDef="let el">
+          <span [ngClass]="getDaysClass(el)">{{ getDaysRemaining(el) }}</span>
+        </td>
+      </ng-container>
+
+      <!-- Status -->
+      <ng-container matColumnDef="status">
+        <th mat-header-cell *matHeaderCellDef>Status</th>
+        <td mat-cell *matCellDef="let el">
+          <span class="status-badge" [ngClass]="'status-' + el.status">
+            {{ getStatusLabel(el.status) }}
+          </span>
+        </td>
+      </ng-container>
+
+      <!-- Ações -->
+      <ng-container matColumnDef="acoes">
+        <th mat-header-cell *matHeaderCellDef>Ações</th>
+        <td mat-cell *matCellDef="let el">
+          <button mat-icon-button matTooltip="Ver detalhes" (click)="viewLicense(el)">
+            <mat-icon>visibility</mat-icon>
+          </button>
+          <button mat-icon-button matTooltip="Editar" (click)="editLicense(el)">
+            <mat-icon>edit</mat-icon>
+          </button>
+          <button mat-icon-button matTooltip="Ver PDF" *ngIf="el.pdfUrl" (click)="openPdf(el)">
+            <mat-icon>picture_as_pdf</mat-icon>
+          </button>
+        </td>
+      </ng-container>
+
+      <tr mat-header-row *matHeaderRowDef="columns"></tr>
+      <tr mat-row *matRowDef="let row; columns: columns;" [ngClass]="{'row-vencida': row.status === 'vencida', 'row-a-vencer': row.status === 'a_vencer'}"></tr>
+    </table>
+
+    <!-- Empty state -->
+    <div *ngIf="!loading && dataSource.data.length === 0" class="empty-state">
+      <mat-icon>description</mat-icon>
+      <p>Nenhuma licença encontrada</p>
+      <button mat-flat-button color="primary" (click)="newLicense()">
+        <mat-icon>add</mat-icon> Cadastrar Licença
+      </button>
+    </div>
+  </div>
+
+  <!-- Paginação -->
+  <mat-paginator
+    [pageSize]="pageSize"
+    [pageSizeOptions]="[30]"
+    [length]="total"
+    (page)="onPage($event)"
+    showFirstLastButtons>
+  </mat-paginator>
+</div>

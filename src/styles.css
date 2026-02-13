@@ -121,7 +121,7 @@ main.content { padding: 0; }
 .page-container {
   /* responsive page container: centers content and caps width to avoid huge empty sides on widescreens */
   width: 100%;
-  padding: 18px;
+  padding: 2px;
   box-sizing: border-box;
   margin: 0 auto;
 }

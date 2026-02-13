@@ -37,6 +37,11 @@
             <td mat-cell *matCellDef="let element"> {{ hasCertLabel(element.hasCertification) }}</td>
         </ng-container>
 
+        <ng-container matColumnDef="certificationNumber">
+            <th mat-header-cell *matHeaderCellDef> CA</th>
+            <td mat-cell *matCellDef="let element"> {{ element.certificationNumber }}</td>
+        </ng-container>
+
         <ng-container matColumnDef="validUntil">
             <th mat-header-cell *matHeaderCellDef> Validade</th>
             <td mat-cell *matCellDef="let element"> {{ element.validUntil }}</td>

@@ -12,4 +12,8 @@ export class UsersRepository extends BaseFirestoreService<User> {
     const ref = this.docRef(id) as DocumentReference<User>;
     return docData(ref, { idField: 'id' });
   }
+
+  async getById(id: string): Promise<User | null> {
+    return this.get(id);
+  }
 }

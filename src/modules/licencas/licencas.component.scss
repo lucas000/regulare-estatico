@@ -1,0 +1,185 @@
+:host {
+  display: block;
+}
+
+.page-container {
+  padding: 16px;
+  max-width: 100%;
+}
+
+.page-header {
+  margin-bottom: 16px;
+}
+
+.page-title {
+  margin: 0 0 4px 0;
+  font-size: 24px;
+  font-weight: 500;
+  color: #1a237e;
+}
+
+.page-subtitle {
+  margin: 0;
+  color: #666;
+  font-size: 14px;
+}
+
+// Filtros
+.filters-card {
+  margin-bottom: 16px;
+  padding: 16px;
+}
+
+.filters-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: flex-start;
+
+  &:not(:last-child) {
+    margin-bottom: 8px;
+  }
+}
+
+.filter-field {
+  flex: 1;
+  min-width: 180px;
+  max-width: 220px;
+
+  &.search-field {
+    flex: 2;
+    max-width: 350px;
+  }
+}
+
+.filter-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-left: auto;
+  flex-wrap: wrap;
+}
+
+// Tabela
+.table-container {
+  overflow-x: auto;
+  margin-bottom: 8px;
+}
+
+.full-width {
+  width: 100%;
+}
+
+table {
+  width: 100%;
+
+  th {
+    font-weight: 600;
+    color: #333;
+    background-color: #fafafa;
+  }
+
+  td, th {
+    padding: 12px 16px;
+  }
+}
+
+// Status badges
+.status-badge {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 500;
+  text-transform: uppercase;
+
+  &.status-em_dia {
+    background-color: #4caf50;
+    color: white;
+  }
+
+  &.status-a_vencer {
+    background-color: #ff9800;
+    color: white;
+  }
+
+  &.status-vencida {
+    background-color: #f44336;
+    color: white;
+  }
+}
+
+// Days remaining
+.days-ok {
+  color: #4caf50;
+  font-weight: 500;
+}
+
+.days-warning {
+  color: #ff9800;
+  font-weight: 600;
+}
+
+.days-danger {
+  color: #f44336;
+  font-weight: 700;
+}
+
+// Row highlights
+.row-vencida {
+  background-color: rgba(244, 67, 54, 0.05);
+}
+
+.row-a-vencer {
+  background-color: rgba(255, 152, 0, 0.05);
+}
+
+// Empty state
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 24px;
+  text-align: center;
+  color: #666;
+
+  mat-icon {
+    font-size: 64px;
+    width: 64px;
+    height: 64px;
+    color: #ccc;
+    margin-bottom: 16px;
+  }
+
+  p {
+    margin: 0 0 16px 0;
+    font-size: 16px;
+  }
+}
+
+// Responsivo
+@media (max-width: 768px) {
+  .filters-row {
+    flex-direction: column;
+  }
+
+  .filter-field {
+    max-width: 100%;
+    width: 100%;
+  }
+
+  .filter-actions {
+    width: 100%;
+    justify-content: flex-end;
+    margin-top: 8px;
+  }
+
+  .page-title {
+    font-size: 20px;
+  }
+}
+
+mat-paginator {
+  margin-top: 8px;
+}

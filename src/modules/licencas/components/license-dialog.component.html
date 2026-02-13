@@ -1,0 +1,145 @@
+<h2 mat-dialog-title>
+  {{ readOnly ? 'Visualizar Licença' : (isEdit ? 'Editar Licença' : 'Nova Licença') }}
+</h2>
+
+<mat-dialog-content>
+  <mat-progress-bar *ngIf="saving || unitsLoading" mode="indeterminate"></mat-progress-bar>
+
+  <form [formGroup]="form" class="license-form">
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Empresa</mat-label>
+      <mat-select formControlName="companyId" (selectionChange)="onCompanyChange()">
+        <mat-option *ngFor="let c of companies" [value]="c.id">{{ c.razaoSocial || c.name }}</mat-option>
+      </mat-select>
+      <mat-error *ngIf="form.get('companyId')?.hasError('required')">Obrigatório</mat-error>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Unidade</mat-label>
+      <mat-select formControlName="unitId" [disabled]="unitsLoading">
+        <mat-option *ngFor="let u of units" [value]="u.id">{{ u.name }}</mat-option>
+      </mat-select>
+      <mat-hint *ngIf="unitsLoading">Carregando unidades...</mat-hint>
+      <mat-error *ngIf="form.get('unitId')?.hasError('required')">Obrigatório</mat-error>
+    </mat-form-field>
+
+    <div class="form-row">
+      <mat-form-field appearance="outline">
+        <mat-label>Tipo de Licença</mat-label>
+        <mat-select formControlName="documentType">
+          <mat-option *ngFor="let t of licenseTypes" [value]="t">{{ t }}</mat-option>
+        </mat-select>
+        <mat-error *ngIf="form.get('documentType')?.hasError('required')">Obrigatório</mat-error>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Nº do Documento</mat-label>
+        <input matInput formControlName="documentNumber" />
+        <mat-error *ngIf="form.get('documentNumber')?.hasError('required')">Obrigatório</mat-error>
+      </mat-form-field>
+    </div>
+
+    <div class="form-row">
+      <mat-form-field appearance="outline">
+        <mat-label>Órgão Emissor</mat-label>
+        <input matInput formControlName="issuingAgency" />
+        <mat-error *ngIf="form.get('issuingAgency')?.hasError('required')">Obrigatório</mat-error>
+      </mat-form-field>
+    </div>
+
+    <div class="form-row">
+      <mat-form-field appearance="outline">
+        <mat-label>Data de Emissão</mat-label>
+        <input matInput formControlName="issueDate" placeholder="DD/MM/AAAA" maxlength="10" (input)="onDateInput($event, 'issueDate')" />
+        <mat-error *ngIf="form.get('issueDate')?.hasError('required')">Obrigatório</mat-error>
+        <mat-error *ngIf="form.get('issueDate')?.hasError('pattern')">Formato: DD/MM/AAAA</mat-error>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Data de Vencimento</mat-label>
+        <input matInput formControlName="expirationDate" placeholder="DD/MM/AAAA" maxlength="10" (input)="onDateInput($event, 'expirationDate')" />
+        <mat-error *ngIf="form.get('expirationDate')?.hasError('required')">Obrigatório</mat-error>
+        <mat-error *ngIf="form.get('expirationDate')?.hasError('pattern')">Formato: DD/MM/AAAA</mat-error>
+      </mat-form-field>
+    </div>
+
+    <!-- PDF da Licença: upload único via Firebase Storage (UI modernizada) -->
+    <div class="full-width upload-group">
+      <label>Anexar documento (PDF)</label>
+      <div class="upload-actions">
+        <input #pdfInput class="hidden-input" type="file" accept="application/pdf" (change)="onPdfSelected($event)" [disabled]="saving || readOnly" />
+        <button mat-stroked-button color="primary" type="button" (click)="pdfInput.click()" [disabled]="saving || readOnly">
+          <mat-icon>upload_file</mat-icon>
+          {{ selectedPdfName ? 'Trocar PDF' : (currentPdfUrl ? 'Substituir PDF' : 'Enviar PDF') }}
+        </button>
+        <span class="file-pill" *ngIf="selectedPdfName">
+          <mat-icon class="pill-icon">insert_drive_file</mat-icon>
+          {{ selectedPdfName }}
+        </span>
+        <a *ngIf="currentPdfUrl && !selectedPdfName" [href]="currentPdfUrl" target="_blank" class="link-pill" title="Abrir PDF atual">
+          <mat-icon class="pill-icon">picture_as_pdf</mat-icon>
+          {{ currentPdfName || 'PDF atual' }}
+        </a>
+      </div>
+    </div>
+
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Observações</mat-label>
+      <textarea matInput formControlName="notes" rows="3"></textarea>
+    </mat-form-field>
+  </form>
+
+  <ng-container *ngIf="isEdit">
+    <mat-divider class="section-divider"></mat-divider>
+    <div class="conditions-section">
+      <div class="conditions-header">
+        <h3>Condicionantes da Licença</h3>
+        <button mat-flat-button color="accent" (click)="newCondition()" [disabled]="readOnly">
+          <mat-icon>add</mat-icon> Nova Condicionante
+        </button>
+      </div>
+      <mat-progress-bar *ngIf="conditionsLoading" mode="indeterminate"></mat-progress-bar>
+      <div *ngIf="conditions.length === 0 && !conditionsLoading" class="empty-conditions">
+        <p>Nenhuma condicionante cadastrada para esta licença.</p>
+      </div>
+      <table mat-table [dataSource]="conditionsDataSource" *ngIf="conditions.length > 0" class="conditions-table">
+        <ng-container matColumnDef="description">
+          <th mat-header-cell *matHeaderCellDef>Descrição</th>
+          <td mat-cell *matCellDef="let c">{{ c.description }}</td>
+        </ng-container>
+        <ng-container matColumnDef="dueDate">
+          <th mat-header-cell *matHeaderCellDef>Prazo</th>
+          <td mat-cell *matCellDef="let c">{{ c.dueDate }}</td>
+        </ng-container>
+        <ng-container matColumnDef="status">
+          <th mat-header-cell *matHeaderCellDef>Status</th>
+          <td mat-cell *matCellDef="let c">
+            <span class="condition-status" [ngClass]="getConditionStatusClass(c.status)">{{ getConditionStatusLabel(c.status) }}</span>
+          </td>
+        </ng-container>
+        <ng-container matColumnDef="evidence">
+          <th mat-header-cell *matHeaderCellDef>Evidência</th>
+          <td mat-cell *matCellDef="let c">
+            <a *ngIf="c.evidenceUrl" [href]="c.evidenceUrl" target="_blank" mat-icon-button matTooltip="Ver evidência"><mat-icon>attach_file</mat-icon></a>
+            <span *ngIf="!c.evidenceUrl">-</span>
+          </td>
+        </ng-container>
+        <ng-container matColumnDef="acoes">
+          <th mat-header-cell *matHeaderCellDef>Ações</th>
+          <td mat-cell *matCellDef="let c">
+            <button mat-icon-button matTooltip="Editar" (click)="editCondition(c)" [disabled]="readOnly"><mat-icon>edit</mat-icon></button>
+            <button mat-icon-button matTooltip="Marcar como cumprida" (click)="markConditionAsCumprida(c)" [disabled]="readOnly || c.status === 'cumprida'"><mat-icon>check_circle</mat-icon></button>
+            <button mat-icon-button matTooltip="Excluir" color="warn" (click)="deleteCondition(c)" [disabled]="readOnly"><mat-icon>delete</mat-icon></button>
+          </td>
+        </ng-container>
+        <tr mat-header-row *matHeaderRowDef="conditionColumns"></tr>
+        <tr mat-row *matRowDef="let row; columns: conditionColumns;"></tr>
+      </table>
+    </div>
+  </ng-container>
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <button mat-button (click)="cancel()">{{ readOnly ? 'Fechar' : 'Cancelar' }}</button>
+  <button mat-flat-button color="primary" (click)="save()" *ngIf="!readOnly" [disabled]="saving">{{ saving ? 'Salvando...' : 'Salvar' }}</button>
+</mat-dialog-actions>

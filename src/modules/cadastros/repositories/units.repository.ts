@@ -29,6 +29,12 @@ export class UnitsRepository extends BaseFirestoreService<Unit> {
     return this.delete(id);
   }
 
+  async listByCompany(companyId: string, max = 200): Promise<Unit[]> {
+    const q = query(this.colRef(), where('companyId', '==', companyId), limit(max));
+    const sn = await getDocs(q as any);
+    return sn.docs.map(d => d.data() as Unit);
+  }
+
   // Paged listing by name with optional companyId filter and startAfter document
   async listByNamePaged(companyId: string | null, term: string, pageSize: number, startAfterDoc?: any) {
     const col = this.colRef();
