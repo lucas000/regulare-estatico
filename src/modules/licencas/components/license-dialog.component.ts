@@ -23,6 +23,7 @@ import { UnitsRepository } from '../../cadastros/repositories/units.repository';
 import { ConditionDialogComponent } from './condition-dialog.component';
 import { StorageService } from '../../../core/services/storage.service';
 import { AuditHistoryDialogComponent, AuditHistoryData } from '../../../core/components/audit-history-dialog.component';
+import { ConfirmDeleteDialogComponent, ConfirmDeleteData } from '../../../core/components/confirm-delete-dialog.component';
 
 // Diretiva de máscara de data
 function applyDateMask(value: string): string {
@@ -240,7 +241,9 @@ export class LicenseDialogComponent implements OnInit, OnDestroy {
     this.cd.markForCheck();
 
     try {
-      this.conditions = await this.conditionsService.listByLicense(licenseId);
+      const allConditions = await this.conditionsService.listByLicense(licenseId);
+      // Filtrar condicionantes não deletadas
+      this.conditions = allConditions.filter(c => !c.deleted);
       this.conditionsDataSource.data = this.conditions;
     } catch (e) {
       console.error('Erro ao carregar condicionantes', e);
@@ -458,16 +461,29 @@ export class LicenseDialogComponent implements OnInit, OnDestroy {
   }
 
   async deleteCondition(cond: LicenseCondition): Promise<void> {
-    if (!confirm('Deseja realmente excluir esta condicionante?')) return;
+    const dialogRef = this.dialog.open(ConfirmDeleteDialogComponent, {
+      width: '420px',
+      data: {
+        title: 'Excluir Condicionante',
+        message: 'Tem certeza que deseja excluir esta condicionante?',
+        itemName: cond.description.length > 60 ? cond.description.substring(0, 60) + '...' : cond.description,
+      } as ConfirmDeleteData,
+      disableClose: true,
+      hasBackdrop: true,
+    });
 
-    try {
-      await this.conditionsService.delete(cond.id);
-      await this.loadConditions(this.data.id);
-      this.snack.open('Condicionante excluída', 'OK', { duration: 3000 });
-    } catch (e) {
-      console.error('Erro ao excluir condicionante', e);
-      this.snack.open('Erro ao excluir condicionante', 'OK', { duration: 3000 });
-    }
+    dialogRef.afterClosed().subscribe(async (confirmed) => {
+      if (confirmed) {
+        try {
+          await this.conditionsService.softDelete(cond.id);
+          await this.loadConditions(this.data.id);
+          this.snack.open('Condicionante excluída com sucesso', 'OK', { duration: 3000 });
+        } catch (e) {
+          console.error('Erro ao excluir condicionante', e);
+          this.snack.open('Erro ao excluir condicionante', 'OK', { duration: 3000 });
+        }
+      }
+    });
   }
 
   getConditionStatusLabel(status: string): string {

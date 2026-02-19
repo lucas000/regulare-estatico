@@ -135,4 +135,25 @@ export class LicensesService {
       }
     }
   }
+
+  // Exclusão lógica (soft delete)
+  async softDelete(id: string): Promise<void> {
+    const audit = await this.getAuditUser();
+    const now = new Date().toISOString();
+
+    await this.repo.updateLicense(id, {
+      deleted: true,
+      deletedAt: now,
+      deletedBy: audit,
+    });
+  }
+
+  // Restaurar registro excluído
+  async restore(id: string): Promise<void> {
+    await this.repo.updateLicense(id, {
+      deleted: false,
+      deletedAt: undefined,
+      deletedBy: undefined,
+    });
+  }
 }

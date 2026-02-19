@@ -19,6 +19,7 @@ import { Subscription } from 'rxjs';
 import { LicensesService } from './services/licenses.service';
 import { License, LICENSE_TYPES, LICENSE_GROUPS, daysUntilExpiration } from './models/license.model';
 import { LicenseDialogComponent } from './components/license-dialog.component';
+import { ConfirmDeleteDialogComponent, ConfirmDeleteData } from '../../core/components/confirm-delete-dialog.component';
 import { SessionService } from '../../core/services/session.service';
 import { CompaniesRepository } from '../cadastros/repositories/companies.repository';
 import { UnitsRepository } from '../cadastros/repositories/units.repository';
@@ -221,7 +222,8 @@ export class LicencasComponent implements OnInit, OnDestroy {
 
       if (reqId !== this._reqId) return;
 
-      this.licenses = res.docs;
+      // Filtrar registros não deletados
+      this.licenses = res.docs.filter(lic => !lic.deleted);
       this.dataSource.data = this.licenses;
       this.cursors[index] = res.lastDoc;
       this.pageIndex = index;
@@ -329,6 +331,32 @@ export class LicencasComponent implements OnInit, OnDestroy {
       data: { ...license, companies: this.companies, isEdit: true, readOnly: true },
       disableClose: true,
       hasBackdrop: true,
+    });
+  }
+
+  deleteLicense(license: License): void {
+    const dialogRef = this.dialog.open(ConfirmDeleteDialogComponent, {
+      width: '420px',
+      data: {
+        title: 'Excluir Licença',
+        message: 'Tem certeza que deseja excluir esta licença?',
+        itemName: `${license.documentType} - ${license.documentNumber}`,
+      } as ConfirmDeleteData,
+      disableClose: true,
+      hasBackdrop: true,
+    });
+
+    dialogRef.afterClosed().subscribe(async (confirmed) => {
+      if (confirmed) {
+        try {
+          await this.licensesService.softDelete(license.id);
+          this.loadPage(this.pageIndex);
+          this.snack.open('Licença excluída com sucesso', 'OK', { duration: 3000 });
+        } catch (error) {
+          console.error('Erro ao excluir licença:', error);
+          this.snack.open('Erro ao excluir licença', 'OK', { duration: 3000 });
+        }
+      }
     });
   }
 

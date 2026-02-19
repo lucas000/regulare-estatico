@@ -21,6 +21,7 @@ import { LicenseCondition, daysUntilExpiration } from '../licencas/models/licens
 import { SessionService } from '../../core/services/session.service';
 import { CompaniesRepository } from '../cadastros/repositories/companies.repository';
 import { Company } from '../cadastros/models/company.model';
+import { ConfirmDeleteDialogComponent, ConfirmDeleteData } from '../../core/components/confirm-delete-dialog.component';
 
 @Component({
   selector: 'app-condicionantes',
@@ -51,6 +52,7 @@ export class CondicionantesComponent implements OnInit, OnDestroy {
   private readonly snack = inject(MatSnackBar);
   private readonly session = inject(SessionService);
   private readonly companiesRepo = inject(CompaniesRepository);
+  private readonly dialog = inject(MatDialog);
 
   // Dados
   conditions: LicenseCondition[] = [];
@@ -149,6 +151,9 @@ export class CondicionantesComponent implements OnInit, OnDestroy {
         }
       }
 
+      // Filtrar registros não deletados
+      allConditions = allConditions.filter(c => !c.deleted);
+
       // Filtrar por status
       const statusFilter = this.statusFilter.value;
       if (statusFilter) {
@@ -243,6 +248,32 @@ export class CondicionantesComponent implements OnInit, OnDestroy {
       console.error('Erro ao atualizar condicionante', e);
       this.snack.open('Erro ao atualizar condicionante', 'OK', { duration: 3000 });
     }
+  }
+
+  deleteCondition(cond: LicenseCondition): void {
+    const dialogRef = this.dialog.open(ConfirmDeleteDialogComponent, {
+      width: '420px',
+      data: {
+        title: 'Excluir Condicionante',
+        message: 'Tem certeza que deseja excluir esta condicionante?',
+        itemName: cond.description.length > 60 ? cond.description.substring(0, 60) + '...' : cond.description,
+      } as ConfirmDeleteData,
+      disableClose: true,
+      hasBackdrop: true,
+    });
+
+    dialogRef.afterClosed().subscribe(async (confirmed) => {
+      if (confirmed) {
+        try {
+          await this.conditionsService.softDelete(cond.id);
+          await this.loadConditions();
+          this.snack.open('Condicionante excluída com sucesso', 'OK', { duration: 3000 });
+        } catch (e) {
+          console.error('Erro ao excluir condicionante', e);
+          this.snack.open('Erro ao excluir condicionante', 'OK', { duration: 3000 });
+        }
+      }
+    });
   }
 
   openEvidence(cond: LicenseCondition): void {

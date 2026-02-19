@@ -36,6 +36,11 @@ export interface License {
   updatedAt?: string;
   createdBy: AuditUser;
   updatedBy?: AuditUser;
+
+  // Exclusão lógica (soft delete)
+  deleted?: boolean;
+  deletedAt?: string;
+  deletedBy?: AuditUser;
 }
 
 export type ConditionStatus = 'pendente' | 'a_vencer' | 'cumprida' | 'vencida';
@@ -64,6 +69,11 @@ export interface LicenseCondition {
   updatedAt?: string;
   createdBy?: AuditUser;
   updatedBy?: AuditUser;
+
+  // Exclusão lógica (soft delete)
+  deleted?: boolean;
+  deletedAt?: string;
+  deletedBy?: AuditUser;
 }
 
 // Grupos de documentos regulatórios

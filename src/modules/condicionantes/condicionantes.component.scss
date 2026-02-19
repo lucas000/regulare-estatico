@@ -183,3 +183,12 @@ table {
 mat-paginator {
   margin-top: 8px;
 }
+
+// Ações em linha
+.actions-row {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 0;
+}
+
