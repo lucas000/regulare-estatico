@@ -292,6 +292,7 @@ export class LicencasComponent implements OnInit, OnDestroy {
       maxWidth: '95vw',
       data: { companyId, companies: this.companies },
       disableClose: true,
+      hasBackdrop: true,
     });
 
     dialogRef.afterClosed().subscribe((result) => {
@@ -308,6 +309,7 @@ export class LicencasComponent implements OnInit, OnDestroy {
       maxWidth: '95vw',
       data: { ...license, companies: this.companies, isEdit: true },
       disableClose: true,
+      hasBackdrop: true,
     });
 
     dialogRef.afterClosed().subscribe((result) => {
@@ -324,6 +326,8 @@ export class LicencasComponent implements OnInit, OnDestroy {
       width: '800px',
       maxWidth: '95vw',
       data: { ...license, companies: this.companies, isEdit: true, readOnly: true },
+      disableClose: true,
+      hasBackdrop: true,
     });
   }
 

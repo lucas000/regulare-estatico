@@ -11,10 +11,17 @@ export interface Employee {
   cargoName: string;
   cargoCbo: string;
 
-  // Novos campos
+  // Novos campos obrigatórios
   esocialRegistration: string;
   esocialCategory: string;
   admissionDate: string;
+  birthDate: string;
+  gender: 'Masculino' | 'Feminino' | 'Não definido';
+
+  // Novos campos opcionais
+  nisPis?: string;
+  fatherName?: string;
+  motherName?: string;
 
   // Campo opcional (cadastro/edição apenas)
   jobDescription?: string;

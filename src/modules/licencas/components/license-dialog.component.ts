@@ -323,6 +323,7 @@ export class LicenseDialogComponent implements OnInit, OnDestroy {
         companyId: this.form.get('companyId')?.value,
       },
       disableClose: true,
+      hasBackdrop: true,
     });
 
     dialogRef.afterClosed().subscribe((result) => {
@@ -339,6 +340,7 @@ export class LicenseDialogComponent implements OnInit, OnDestroy {
       maxWidth: '95vw',
       data: { ...cond, isEdit: true },
       disableClose: true,
+      hasBackdrop: true,
     });
 
     dialogRef.afterClosed().subscribe((result) => {

@@ -7,15 +7,20 @@ export interface AuditUser {
 export type CompanyStatus = 'ativo' | 'inativo';
 export type CompanyPersonType = 'PJ' | 'PF';
 export type CompanyType =
-  | 'Fazenda'
-  | 'Indústria'
-  | 'Revenda'
-  | 'Prestadora'
-  | 'Aviação Agrícola'
-  | 'Comércio'
-  | 'Serviços'
-  | 'Associação'
-  | 'Outro';
+    | 'Fazenda'
+    | 'Indústria'
+    | 'Revenda'
+    | 'Prestadora'
+    | 'Aviação Agrícola'
+    | 'Comércio'
+    | 'Serviços'
+    | 'Associação'
+    | 'Empresa Pública'
+    | 'Órgão Público'
+    | 'Transportadora'
+    | 'Distribuição'
+    | 'Outro';
+
 
 export interface CompanyCnae {
   id: string;

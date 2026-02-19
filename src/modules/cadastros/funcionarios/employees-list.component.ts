@@ -188,7 +188,7 @@ export class EmployeesListComponent implements OnInit, OnDestroy {
   }
 
   newEmployee() {
-    const ref = this.dialog.open(EmployeeDialogComponent, { width: '700px' });
+    const ref = this.dialog.open(EmployeeDialogComponent, { width: '700px', disableClose: true, hasBackdrop: true });
     ref.afterClosed().subscribe(async (res: any) => {
       if (!res) return;
       await this.employeesService.createEmployee(res);
@@ -198,7 +198,7 @@ export class EmployeesListComponent implements OnInit, OnDestroy {
   }
 
   editEmployee(e: Employee) {
-    const ref = this.dialog.open(EmployeeDialogComponent, { width: '700px', data: e });
+    const ref = this.dialog.open(EmployeeDialogComponent, { width: '700px', data: e, disableClose: true, hasBackdrop: true });
     ref.afterClosed().subscribe(async (res: any) => {
       if (!res) return;
       await this.employeesService.updateEmployee(e.id, res);

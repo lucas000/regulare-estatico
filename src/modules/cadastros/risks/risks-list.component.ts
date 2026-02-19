@@ -150,7 +150,7 @@ export class RisksListComponent implements OnInit, OnDestroy {
   }
 
   newRisk() {
-    const ref = this.dialog.open(RiskDialogComponent, { width: '600px' });
+    const ref = this.dialog.open(RiskDialogComponent, { width: '600px', disableClose: true, hasBackdrop: true });
     ref.afterClosed().subscribe(async (res: any) => {
       if (!res) return;
       await this.risksService.createRisk(res);
@@ -160,7 +160,7 @@ export class RisksListComponent implements OnInit, OnDestroy {
   }
 
   editRisk(r: Risk) {
-    const ref = this.dialog.open(RiskDialogComponent, { width: '600px', data: r });
+    const ref = this.dialog.open(RiskDialogComponent, { width: '600px', data: r, disableClose: true, hasBackdrop: true });
     ref.afterClosed().subscribe(async (res: any) => {
       if (!res) return;
       await this.risksService.updateRisk(r.id, res);

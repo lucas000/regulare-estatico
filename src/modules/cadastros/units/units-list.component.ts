@@ -147,8 +147,8 @@ export class UnitsListComponent implements OnInit, OnDestroy {
   nextPage() { if (!this.hasMore) return; this.paginator?.nextPage(); }
   prevPage() { if (this.paginator && this.paginator.pageIndex > 0) this.paginator.previousPage(); }
 
-  newUnit() { const ref = this.dialog.open(UnitDialogComponent, { width: '600px' }); ref.afterClosed().subscribe(async (res: any) => { if (!res) return; await this.unitsService.createUnit(res); this.snack.open('Unidade criada com sucesso', 'Fechar', { duration: 3000 }); this.loadPage(0, true); }); }
-  editUnit(u: Unit) { const ref = this.dialog.open(UnitDialogComponent, { width: '600px', data: u }); ref.afterClosed().subscribe(async (res: any) => { if (!res) return; await this.unitsService.updateUnit(u.id, res); this.snack.open('Unidade atualizada com sucesso', 'Fechar', { duration: 3000 }); this.loadPage(0, true); }); }
+  newUnit() { const ref = this.dialog.open(UnitDialogComponent, { width: '600px', disableClose: true, hasBackdrop: true }); ref.afterClosed().subscribe(async (res: any) => { if (!res) return; await this.unitsService.createUnit(res); this.snack.open('Unidade criada com sucesso', 'Fechar', { duration: 3000 }); this.loadPage(0, true); }); }
+  editUnit(u: Unit) { const ref = this.dialog.open(UnitDialogComponent, { width: '600px', data: u, disableClose: true, hasBackdrop: true }); ref.afterClosed().subscribe(async (res: any) => { if (!res) return; await this.unitsService.updateUnit(u.id, res); this.snack.open('Unidade atualizada com sucesso', 'Fechar', { duration: 3000 }); this.loadPage(0, true); }); }
   toggleActive(u: Unit) {
     const willActivate = u.status !== 'active';
     this.unitsService.setActive(u.id, willActivate).then(() => {

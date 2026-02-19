@@ -129,7 +129,7 @@ export class SectorsListComponent implements OnInit, OnDestroy {
 
   newSector() {
     this.assertService();
-    const ref = this.dialog.open(SectorDialogComponent, { width: '600px' });
+    const ref = this.dialog.open(SectorDialogComponent, { width: '600px', disableClose: true, hasBackdrop: true });
     ref.afterClosed().subscribe(async (res: any) => {
       if (!res) return;
       await this.sectorsService.createSector(res);
@@ -166,7 +166,7 @@ export class SectorsListComponent implements OnInit, OnDestroy {
 
   editSector(s: Sector) {
     this.assertService();
-    const ref = this.dialog.open(SectorDialogComponent, { width: '600px', data: s });
+    const ref = this.dialog.open(SectorDialogComponent, { width: '600px', data: s, disableClose: true, hasBackdrop: true });
     ref.afterClosed().subscribe(async (res: any) => {
       if (!res) return;
       await this.sectorsService.updateSector(s.id, res);

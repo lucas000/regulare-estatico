@@ -171,7 +171,7 @@ export class EquipmentsListComponent implements OnInit, OnDestroy {
   }
 
   newEquipment() {
-    const ref = this.dialog.open(EquipmentDialogComponent, { width: '600px' });
+    const ref = this.dialog.open(EquipmentDialogComponent, { width: '600px', disableClose: true, hasBackdrop: true });
     ref.afterClosed().subscribe(async (res: any) => {
       if (!res) return;
       try {
@@ -185,7 +185,7 @@ export class EquipmentsListComponent implements OnInit, OnDestroy {
   }
 
   editEquipment(equip: Equipment) {
-    const ref = this.dialog.open(EquipmentDialogComponent, { width: '600px', data: equip });
+    const ref = this.dialog.open(EquipmentDialogComponent, { width: '600px', data: equip, disableClose: true, hasBackdrop: true });
     ref.afterClosed().subscribe(async (res: any) => {
       if (!res) return;
       try {

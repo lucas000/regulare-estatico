@@ -142,7 +142,7 @@ export class CargosListComponent implements OnInit, OnDestroy {
     }
 
     newCargo() {
-        const ref = this.dialog.open(CargoDialogComponent, {width: '600px'});
+        const ref = this.dialog.open(CargoDialogComponent, {width: '600px', disableClose: true, hasBackdrop: true});
         ref.afterClosed().subscribe(async (res: any) => {
             if (!res) return;
             try {
@@ -156,7 +156,7 @@ export class CargosListComponent implements OnInit, OnDestroy {
     }
 
     editCargo(c: Cargo) {
-        const ref = this.dialog.open(CargoDialogComponent, {width: '600px', data: c});
+        const ref = this.dialog.open(CargoDialogComponent, {width: '600px', data: c, disableClose: true, hasBackdrop: true});
         ref.afterClosed().subscribe(async (res: any) => {
             if (!res) return;
             try {

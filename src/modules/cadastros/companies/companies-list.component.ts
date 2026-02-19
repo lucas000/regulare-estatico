@@ -173,7 +173,7 @@ export class CompaniesListComponent implements OnInit, OnDestroy {
       this.snack.open('Você não tem permissão para criar novas empresas.', 'Fechar', { duration: 3000 });
       return;
     }
-    const ref = this.dialog.open(CompanyDialogComponent, { width: '600px' });
+    const ref = this.dialog.open(CompanyDialogComponent, { width: '600px', disableClose: true, hasBackdrop: true });
     ref.afterClosed().subscribe(async (res: any) => {
       if (!res) return;
       await this.companiesService.createCompanyWithClientUser(res);
@@ -183,7 +183,7 @@ export class CompaniesListComponent implements OnInit, OnDestroy {
   }
 
   editCompany(c: Company) {
-    const ref = this.dialog.open(CompanyDialogComponent, { width: '600px', data: c });
+    const ref = this.dialog.open(CompanyDialogComponent, { width: '600px', data: c, disableClose: true, hasBackdrop: true });
     ref.afterClosed().subscribe(async (res: any) => {
       if (!res) return;
       await this.companiesService.updateCompany(c.id, res);
