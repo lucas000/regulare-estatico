@@ -16,12 +16,13 @@ import { Subscription } from 'rxjs';
 
 import { LicensesService } from '../services/licenses.service';
 import { LicenseConditionsService } from '../services/license-conditions.service';
-import { LicenseCondition, LICENSE_TYPES } from '../models/license.model';
+import { LicenseCondition, LICENSE_TYPES, LICENSE_GROUPS, LicenseGroup, PERIODICITY_OPTIONS, LicensePeriodicity } from '../models/license.model';
 import { Company } from '../../cadastros/models/company.model';
 import { Unit } from '../../cadastros/models/unit.model';
 import { UnitsRepository } from '../../cadastros/repositories/units.repository';
 import { ConditionDialogComponent } from './condition-dialog.component';
 import { StorageService } from '../../../core/services/storage.service';
+import { AuditHistoryDialogComponent, AuditHistoryData } from '../../../core/components/audit-history-dialog.component';
 
 // Diretiva de máscara de data
 function applyDateMask(value: string): string {
@@ -81,6 +82,9 @@ export class LicenseDialogComponent implements OnInit, OnDestroy {
   units: Unit[] = [];
   unitsLoading = false;
   licenseTypes = LICENSE_TYPES;
+  licenseGroups: LicenseGroup[] = LICENSE_GROUPS;
+  filteredLicenseTypes: string[] = [];
+  periodicityOptions = PERIODICITY_OPTIONS;
 
   // Condicionantes
   conditions: LicenseCondition[] = [];
@@ -101,18 +105,50 @@ export class LicenseDialogComponent implements OnInit, OnDestroy {
     this.subs.unsubscribe();
   }
 
+  // Verifica se o grupo selecionado é "Programas de SST"
+  get isSSTProgram(): boolean {
+    return this.form?.get('documentGroup')?.value === 'Programas de SST';
+  }
+
   private initForm(): void {
     this.form = this.fb.group({
       companyId: ['', Validators.required],
       unitId: ['', Validators.required],
+      documentGroup: ['', Validators.required],
       documentType: ['', Validators.required],
       documentNumber: ['', Validators.required],
       issuingAgency: ['', Validators.required],
+      legalBasis: ['', [Validators.required, Validators.maxLength(150)]],
+      periodicity: [''],
       issueDate: ['', [Validators.required, Validators.pattern(/^\d{2}\/\d{2}\/\d{4}$/)]],
       expirationDate: ['', [Validators.required, Validators.pattern(/^\d{2}\/\d{2}\/\d{4}$/)]],
       pdfUrl: [''],
       notes: [''],
+      // Campos do Responsável Técnico (obrigatórios para Programas de SST)
+      technicalResponsibleName: [''],
+      technicalResponsibleCpf: [''],
+      technicalResponsibleCouncil: [''],
+      technicalResponsibleRegistration: [''],
+      technicalResponsibleArt: [''],
     });
+
+    // Listener para atualizar tipos de documento quando o grupo muda
+    this.subs.add(
+      this.form.get('documentGroup')?.valueChanges.subscribe((group: string) => {
+        const found = this.licenseGroups.find(g => g.group === group);
+        this.filteredLicenseTypes = found ? found.items : [];
+        // Limpa o tipo selecionado se não pertence ao novo grupo
+        const currentType = this.form.get('documentType')?.value;
+        if (currentType && !this.filteredLicenseTypes.includes(currentType)) {
+          this.form.get('documentType')?.reset();
+        }
+
+        // Atualiza validações dos campos de Responsável Técnico
+        this.updateTechnicalResponsibleValidators(group === 'Programas de SST');
+
+        this.cd.markForCheck();
+      }) as Subscription
+    );
 
     if (this.data) {
       this.isEdit = !!this.data.isEdit;
@@ -120,16 +156,36 @@ export class LicenseDialogComponent implements OnInit, OnDestroy {
       this.companies = this.data.companies || [];
 
       if (this.isEdit) {
+        // Se temos documentGroup salvo, carregar os tipos primeiro
+        if (this.data.documentGroup) {
+          const found = this.licenseGroups.find(g => g.group === this.data.documentGroup);
+          this.filteredLicenseTypes = found ? found.items : [];
+
+          // Se é SST, ativa as validações dos campos de Responsável Técnico
+          if (this.data.documentGroup === 'Programas de SST') {
+            this.updateTechnicalResponsibleValidators(true);
+          }
+        }
+
         this.form.patchValue({
           companyId: this.data.companyId,
           unitId: this.data.unitId,
+          documentGroup: this.data.documentGroup || '',
           documentType: this.data.documentType,
           documentNumber: this.data.documentNumber,
           issuingAgency: this.data.issuingAgency,
+          legalBasis: this.data.legalBasis || '',
+          periodicity: this.data.periodicity || '',
           issueDate: this.data.issueDate,
           expirationDate: this.data.expirationDate,
           pdfUrl: this.data.pdfUrl,
           notes: this.data.notes,
+          // Campos do Responsável Técnico
+          technicalResponsibleName: this.data.technicalResponsibleName || '',
+          technicalResponsibleCpf: this.data.technicalResponsibleCpf || '',
+          technicalResponsibleCouncil: this.data.technicalResponsibleCouncil || '',
+          technicalResponsibleRegistration: this.data.technicalResponsibleRegistration || '',
+          technicalResponsibleArt: this.data.technicalResponsibleArt || '',
         });
         this.currentPdfUrl = this.data.pdfUrl || '';
         this.currentPdfName = this.data.pdfName || '';
@@ -200,6 +256,45 @@ export class LicenseDialogComponent implements OnInit, OnDestroy {
     const masked = applyDateMask(input.value);
     input.value = masked;
     this.form.get(controlName)?.setValue(masked, { emitEvent: false });
+  }
+
+  // Máscara de CPF para Responsável Técnico
+  onTechnicalCpfInput(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const raw = (input?.value ?? '').toString();
+    const digits = raw.replace(/\D/g, '').slice(0, 11);
+    let masked = digits;
+
+    if (digits.length > 3) masked = `${digits.slice(0, 3)}.${digits.slice(3)}`;
+    if (digits.length > 6) masked = `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6)}`;
+    if (digits.length > 9) masked = `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6, 9)}-${digits.slice(9)}`;
+
+    input.value = masked;
+    this.form.get('technicalResponsibleCpf')?.setValue(masked, { emitEvent: false });
+  }
+
+  // Atualiza validadores dos campos de Responsável Técnico
+  private updateTechnicalResponsibleValidators(isRequired: boolean): void {
+    const fields = [
+      'technicalResponsibleName',
+      'technicalResponsibleCpf',
+      'technicalResponsibleCouncil',
+      'technicalResponsibleRegistration',
+      'technicalResponsibleArt'
+    ];
+
+    fields.forEach(field => {
+      const control = this.form.get(field);
+      if (control) {
+        if (isRequired) {
+          control.setValidators([Validators.required]);
+        } else {
+          control.clearValidators();
+          control.setValue(''); // Limpa o valor quando não é SST
+        }
+        control.updateValueAndValidity();
+      }
+    });
   }
 
   onPdfSelected(event: Event): void {
@@ -387,5 +482,22 @@ export class LicenseDialogComponent implements OnInit, OnDestroy {
 
   getConditionStatusClass(status: string): string {
     return `status-${status}`;
+  }
+
+  // Abre modal de histórico de alterações
+  openAuditHistory(): void {
+    const auditData: AuditHistoryData = {
+      title: 'Licença Regulatória',
+      createdAt: this.data?.createdAt,
+      createdBy: this.data?.createdBy,
+      updatedAt: this.data?.updatedAt,
+      updatedBy: this.data?.updatedBy,
+    };
+
+    this.dialog.open(AuditHistoryDialogComponent, {
+      data: auditData,
+      width: '400px',
+      disableClose: false,
+    });
   }
 }

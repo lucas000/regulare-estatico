@@ -1,16 +1,19 @@
 import { ChangeDetectionStrategy, Component, inject, OnInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { MatDialogRef, MatDialogModule, MAT_DIALOG_DATA } from '@angular/material/dialog';
+import { MatDialogRef, MatDialogModule, MAT_DIALOG_DATA, MatDialog } from '@angular/material/dialog';
 import { ReactiveFormsModule, FormBuilder, Validators, FormGroup, FormControl } from '@angular/forms';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
 import { MatSelectModule } from '@angular/material/select';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
+import { MatIconModule } from '@angular/material/icon';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { Subscription } from 'rxjs';
 import { CompaniesService } from '../services/companies.service';
 import { UnitsRepository } from '../repositories/units.repository';
 import { SessionService } from '../../../core/services/session.service';
+import { AuditHistoryDialogComponent, AuditHistoryData } from '../../../core/components/audit-history-dialog.component';
 
 function toUpperSafe(v: any): string {
   return String(v ?? '').trim().toUpperCase();
@@ -28,6 +31,8 @@ function toUpperSafe(v: any): string {
     MatSelectModule,
     MatDialogModule,
     MatProgressBarModule,
+    MatIconModule,
+    MatTooltipModule,
   ],
   templateUrl: './sector-dialog.component.html',
   styleUrls: ['./sector-dialog.component.scss'],
@@ -40,12 +45,14 @@ export class SectorDialogComponent implements OnInit, OnDestroy {
   companiesLoading = false;
   unitsLoading = false;
   loadError: string | null = null;
+  isEdit = false;
   private subs = new Subscription();
   private readonly cd = inject(ChangeDetectorRef);
   private readonly data = inject(MAT_DIALOG_DATA, { optional: true });
   private readonly companiesService = inject(CompaniesService);
   private readonly unitsRepo = inject(UnitsRepository);
   private readonly session = inject(SessionService);
+  private readonly auditDialog = inject(MatDialog);
   isCliente: boolean = this.session.hasRole(['CLIENTE'] as any);
 
   statusOptions = [
@@ -63,7 +70,10 @@ export class SectorDialogComponent implements OnInit, OnDestroy {
       status: ['active', [Validators.required]],
       notes: [''],
     });
-    if (this.data) this.form.patchValue(this.data as any);
+    if (this.data) {
+      this.form.patchValue(this.data as any);
+      this.isEdit = !!(this.data as any).id;
+    }
 
     // CLIENTE: fixa empresa padrão (do usuário) e desabilita edição
     if (this.isCliente) {
@@ -159,5 +169,21 @@ export class SectorDialogComponent implements OnInit, OnDestroy {
 
   cancel() {
     this.dialogRef.close();
+  }
+
+  openAuditHistory(): void {
+    const auditData: AuditHistoryData = {
+      title: 'Setor',
+      createdAt: this.data?.createdAt,
+      createdBy: this.data?.createdBy,
+      updatedAt: this.data?.updatedAt,
+      updatedBy: this.data?.updatedBy,
+    };
+
+    this.auditDialog.open(AuditHistoryDialogComponent, {
+      data: auditData,
+      width: '400px',
+      disableClose: false,
+    });
   }
 }

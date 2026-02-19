@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, inject, ChangeDetectorRef, OnDestroy, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { MatDialogRef, MAT_DIALOG_DATA, MatDialogModule } from '@angular/material/dialog';
+import { MatDialogRef, MAT_DIALOG_DATA, MatDialogModule, MatDialog } from '@angular/material/dialog';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators, FormControl } from '@angular/forms';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
@@ -19,6 +19,8 @@ import { Unit, DocumentType } from '../models/unit.model';
 import { CnaeService, Cnae } from '../../../core/services/cnae.service';
 import { Subscription, debounceTime, distinctUntilChanged, switchMap, of, catchError, finalize } from 'rxjs';
 import { SessionService } from '../../../core/services/session.service';
+import { AuditHistoryDialogComponent, AuditHistoryData } from '../../../core/components/audit-history-dialog.component';
+import {MatTooltipModule} from "@angular/material/tooltip";
 
 function cnaeToCompanyCnae(c: Cnae | CompanyCnae | string | null | undefined): CompanyCnae {
   if (!c) return { id: '', descricao: '', observacoes: [] } as any;
@@ -50,9 +52,20 @@ function toUpperSafe(v: any): string {
     MatAutocompleteModule,
     MatIconModule,
     MatChipsModule,
+    MatTooltipModule,
   ],
   template: `
-    <h2 mat-dialog-title>Unidade</h2>
+    <div class="dialog-header">
+      <h2 mat-dialog-title>Unidade</h2>
+      <button 
+        *ngIf="isEdit" 
+        mat-icon-button 
+        class="audit-btn"
+        matTooltip="Histórico de alterações"
+        (click)="openAuditHistory()">
+        <mat-icon>history</mat-icon>
+      </button>
+    </div>
     <mat-dialog-content [formGroup]="form">
       <mat-form-field appearance="fill" style="width:100%">
         <mat-label>Empreendimento (PF/PJ)</mat-label>
@@ -220,6 +233,21 @@ function toUpperSafe(v: any): string {
       <button mat-flat-button color="primary" (click)="save()">Salvar</button>
     </mat-dialog-actions>
   `,
+  styles: [`
+    .dialog-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 0;
+    }
+    .dialog-header h2[mat-dialog-title] { margin: 0; flex: 1; }
+    .dialog-header .audit-btn {
+      color: #757575;
+      transition: color 0.2s ease;
+    }
+    .dialog-header .audit-btn:hover { color: #1565c0; }
+    .dialog-header .audit-btn mat-icon { font-size: 20px; width: 20px; height: 20px; }
+  `],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class UnitDialogComponent implements OnInit, OnDestroy {
@@ -239,6 +267,7 @@ export class UnitDialogComponent implements OnInit, OnDestroy {
   municipiosError: string | null = null;
   documentTypes: DocumentType[] = ['CNPJ', 'CPF', 'CAEPF', 'CNO'];
   submitted = false;
+  isEdit = false;
 
   // CNAE UI state (replicado do cadastro de Empresas)
   cnaeMainSearch = new FormControl<string | CompanyCnae>('');
@@ -277,6 +306,7 @@ export class UnitDialogComponent implements OnInit, OnDestroy {
 
     if (this.data) {
       const d: any = this.data;
+      this.isEdit = !!d.id;
       this.form.patchValue({
         companyId: d.companyId ?? '',
         name: d.name ?? '',
@@ -532,5 +562,23 @@ export class UnitDialogComponent implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     this.subs.unsubscribe();
+  }
+
+  private readonly auditDialog = inject(MatDialog);
+
+  openAuditHistory(): void {
+    const auditData: AuditHistoryData = {
+      title: 'Unidade',
+      createdAt: this.data?.createdAt,
+      createdBy: this.data?.createdBy,
+      updatedAt: this.data?.updatedAt,
+      updatedBy: this.data?.updatedBy,
+    };
+
+    this.auditDialog.open(AuditHistoryDialogComponent, {
+      data: auditData,
+      width: '400px',
+      disableClose: false,
+    });
   }
 }

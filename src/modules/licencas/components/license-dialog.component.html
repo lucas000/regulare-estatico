@@ -1,6 +1,16 @@
-<h2 mat-dialog-title>
-  {{ readOnly ? 'Visualizar Licença' : (isEdit ? 'Editar Licença' : 'Nova Licença') }}
-</h2>
+<div class="dialog-header">
+  <h2 mat-dialog-title>
+    {{ readOnly ? 'Visualizar Licença' : (isEdit ? 'Editar Licença' : 'Nova Licença') }}
+  </h2>
+  <button
+    *ngIf="isEdit || readOnly"
+    mat-icon-button
+    class="audit-btn"
+    matTooltip="Histórico de alterações"
+    (click)="openAuditHistory()">
+    <mat-icon>history</mat-icon>
+  </button>
+</div>
 
 <mat-dialog-content>
   <mat-progress-bar *ngIf="saving || unitsLoading" mode="indeterminate"></mat-progress-bar>
@@ -23,12 +33,21 @@
       <mat-error *ngIf="form.get('unitId')?.hasError('required')">Obrigatório</mat-error>
     </mat-form-field>
 
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Grupo do Documento</mat-label>
+      <mat-select formControlName="documentGroup">
+        <mat-option *ngFor="let g of licenseGroups" [value]="g.group">{{ g.group }}</mat-option>
+      </mat-select>
+      <mat-error *ngIf="form.get('documentGroup')?.hasError('required')">Obrigatório</mat-error>
+    </mat-form-field>
+
     <div class="form-row">
       <mat-form-field appearance="outline">
-        <mat-label>Tipo de Licença</mat-label>
-        <mat-select formControlName="documentType">
-          <mat-option *ngFor="let t of licenseTypes" [value]="t">{{ t }}</mat-option>
+        <mat-label>Tipo de Documento Regulatório</mat-label>
+        <mat-select formControlName="documentType" [disabled]="!form.get('documentGroup')?.value">
+          <mat-option *ngFor="let t of filteredLicenseTypes" [value]="t">{{ t }}</mat-option>
         </mat-select>
+        <mat-hint *ngIf="!form.get('documentGroup')?.value">Selecione o grupo primeiro</mat-hint>
         <mat-error *ngIf="form.get('documentType')?.hasError('required')">Obrigatório</mat-error>
       </mat-form-field>
 
@@ -45,6 +64,64 @@
         <input matInput formControlName="issuingAgency" />
         <mat-error *ngIf="form.get('issuingAgency')?.hasError('required')">Obrigatório</mat-error>
       </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Periodicidade</mat-label>
+        <mat-select formControlName="periodicity">
+          <mat-option value="">Selecione...</mat-option>
+          <mat-option *ngFor="let p of periodicityOptions" [value]="p">{{ p }}</mat-option>
+        </mat-select>
+      </mat-form-field>
+    </div>
+
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Base Legal / Referência Normativa</mat-label>
+      <textarea matInput formControlName="legalBasis" maxlength="150" rows="2"></textarea>
+      <mat-hint align="end">{{ (form.get('legalBasis')?.value?.length || 0) }}/150</mat-hint>
+      <mat-error *ngIf="form.get('legalBasis')?.hasError('required')">Obrigatório</mat-error>
+      <mat-error *ngIf="form.get('legalBasis')?.hasError('maxlength')">Máximo 150 caracteres</mat-error>
+    </mat-form-field>
+
+    <!-- Responsável Técnico pela Elaboração (apenas para Programas de SST) -->
+    <div *ngIf="isSSTProgram" class="technical-responsible-section">
+      <mat-divider></mat-divider>
+      <h3 class="section-title">Responsável Técnico pela Elaboração</h3>
+
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Nome Completo</mat-label>
+        <input matInput formControlName="technicalResponsibleName" />
+        <mat-error *ngIf="form.get('technicalResponsibleName')?.hasError('required')">Obrigatório</mat-error>
+      </mat-form-field>
+
+      <div class="form-row">
+        <mat-form-field appearance="outline">
+          <mat-label>CPF</mat-label>
+          <input matInput formControlName="technicalResponsibleCpf" placeholder="000.000.000-00" maxlength="14" (input)="onTechnicalCpfInput($event)" />
+          <mat-error *ngIf="form.get('technicalResponsibleCpf')?.hasError('required')">Obrigatório</mat-error>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Conselho de Classe</mat-label>
+          <input matInput formControlName="technicalResponsibleCouncil" placeholder="Ex: CREA, CRM, CRN..." />
+          <mat-error *ngIf="form.get('technicalResponsibleCouncil')?.hasError('required')">Obrigatório</mat-error>
+        </mat-form-field>
+      </div>
+
+      <div class="form-row">
+        <mat-form-field appearance="outline">
+          <mat-label>Nº de Registro</mat-label>
+          <input matInput formControlName="technicalResponsibleRegistration" />
+          <mat-error *ngIf="form.get('technicalResponsibleRegistration')?.hasError('required')">Obrigatório</mat-error>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Nº da ART</mat-label>
+          <input matInput formControlName="technicalResponsibleArt" />
+          <mat-error *ngIf="form.get('technicalResponsibleArt')?.hasError('required')">Obrigatório</mat-error>
+        </mat-form-field>
+      </div>
+
+      <mat-divider></mat-divider>
     </div>
 
     <div class="form-row">

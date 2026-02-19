@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, ChangeDetectorRef, Component, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { MatDialogRef, MAT_DIALOG_DATA, MatDialogModule } from '@angular/material/dialog';
+import { MatDialogRef, MAT_DIALOG_DATA, MatDialogModule, MatDialog } from '@angular/material/dialog';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators, FormControl } from '@angular/forms';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
@@ -11,6 +11,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { RisksRepository } from '../repositories/risks.repository';
 import { Risk } from '../models/risk.model';
+import { AuditHistoryDialogComponent, AuditHistoryData } from '../../../core/components/audit-history-dialog.component';
 
 @Component({
   selector: 'app-cargo-dialog',
@@ -28,7 +29,17 @@ import { Risk } from '../models/risk.model';
     MatTooltipModule,
   ],
   template: `
-    <h2 mat-dialog-title>Cargo</h2>
+    <div class="dialog-header">
+      <h2 mat-dialog-title>Cargo</h2>
+      <button 
+        *ngIf="isEdit" 
+        mat-icon-button 
+        class="audit-btn"
+        matTooltip="Histórico de alterações"
+        (click)="openAuditHistory()">
+        <mat-icon>history</mat-icon>
+      </button>
+    </div>
     <mat-dialog-content [formGroup]="form">
       <mat-form-field appearance="fill" style="width:100%">
         <mat-label>Nome</mat-label>
@@ -111,6 +122,20 @@ import { Risk } from '../models/risk.model';
     </mat-dialog-actions>
   `,
   styles: [`
+    .dialog-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 0;
+    }
+    .dialog-header h2[mat-dialog-title] { margin: 0; flex: 1; }
+    .dialog-header .audit-btn {
+      color: #757575;
+      transition: color 0.2s ease;
+    }
+    .dialog-header .audit-btn:hover { color: #1565c0; }
+    .dialog-header .audit-btn mat-icon { font-size: 20px; width: 20px; height: 20px; }
+
     .risks-section {
       margin-top: 16px;
       padding-top: 16px;
@@ -178,9 +203,11 @@ import { Risk } from '../models/risk.model';
 })
 export class CargoDialogComponent implements OnInit {
   form!: FormGroup;
+  isEdit = false;
   private readonly data = inject(MAT_DIALOG_DATA);
   private readonly risksRepo = inject(RisksRepository);
   private readonly cd = inject(ChangeDetectorRef);
+  private readonly auditDialog = inject(MatDialog);
 
   // Todos os riscos disponíveis
   allRisks: Risk[] = [];
@@ -224,6 +251,7 @@ export class CargoDialogComponent implements OnInit {
 
     if (this.data) {
       this.form.patchValue(this.data as any);
+      this.isEdit = !!this.data.id;
       // Carregar riskIds existentes
       if ((this.data as any).riskIds && Array.isArray((this.data as any).riskIds)) {
         this.selectedRiskIds = [...(this.data as any).riskIds];
@@ -302,5 +330,21 @@ export class CargoDialogComponent implements OnInit {
 
   cancel() {
     this.dialogRef.close();
+  }
+
+  openAuditHistory(): void {
+    const auditData: AuditHistoryData = {
+      title: 'Cargo',
+      createdAt: this.data?.createdAt,
+      createdBy: this.data?.createdBy,
+      updatedAt: this.data?.updatedAt,
+      updatedBy: this.data?.updatedBy,
+    };
+
+    this.auditDialog.open(AuditHistoryDialogComponent, {
+      data: auditData,
+      width: '400px',
+      disableClose: false,
+    });
   }
 }

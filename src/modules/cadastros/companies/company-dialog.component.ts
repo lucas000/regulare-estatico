@@ -1,6 +1,6 @@
 import {ChangeDetectionStrategy, Component, inject, OnDestroy, OnInit, ChangeDetectorRef} from '@angular/core';
 import {CommonModule} from '@angular/common';
-import {MatDialogRef, MatDialogModule, MAT_DIALOG_DATA} from '@angular/material/dialog';
+import {MatDialogRef, MatDialogModule, MAT_DIALOG_DATA, MatDialog} from '@angular/material/dialog';
 import {ReactiveFormsModule, FormBuilder, Validators, FormGroup, FormControl} from '@angular/forms';
 import {MatFormFieldModule} from '@angular/material/form-field';
 import {MatInputModule} from '@angular/material/input';
@@ -10,11 +10,13 @@ import {MatAutocompleteModule} from '@angular/material/autocomplete';
 import {MatIconModule} from '@angular/material/icon';
 import {MatChipsModule} from '@angular/material/chips';
 import {MatSnackBar, MatSnackBarModule} from '@angular/material/snack-bar';
+import {MatTooltipModule} from '@angular/material/tooltip';
 import {CompaniesRepository} from '../repositories/companies.repository';
 import {Subscription, debounceTime, distinctUntilChanged, switchMap, of, catchError, finalize} from 'rxjs';
 import {LocalidadesService, Estado, Municipio} from '../../../core/services/localidades.service';
 import {CompanyPersonType, CompanyType, CompanyCnae} from '../models/company.model';
 import {CnaeService, Cnae} from '../../../core/services/cnae.service';
+import {AuditHistoryDialogComponent, AuditHistoryData} from '../../../core/components/audit-history-dialog.component';
 
 function cnaeToCompanyCnae(c: Cnae | CompanyCnae | null | undefined): CompanyCnae {
     if (!c) return {id: '', descricao: '', observacoes: []};
@@ -44,6 +46,7 @@ function toUpperSafe(v: any): string {
         MatIconModule,
         MatChipsModule,
         MatSnackBarModule,
+        MatTooltipModule,
     ],
     templateUrl: './company-dialog.component.html',
     styleUrls: ['./company-dialog.component.scss'],
@@ -440,5 +443,23 @@ export class CompanyDialogComponent implements OnInit, OnDestroy {
         if (masked !== this.form.get('legalResponsibleCpf')?.value) {
             this.form.get('legalResponsibleCpf')?.setValue(masked, {emitEvent: false});
         }
+    }
+
+    private readonly auditDialog = inject(MatDialog);
+
+    openAuditHistory(): void {
+        const auditData: AuditHistoryData = {
+            title: 'Empresa',
+            createdAt: this.data?.createdAt,
+            createdBy: this.data?.createdBy,
+            updatedAt: this.data?.updatedAt,
+            updatedBy: this.data?.updatedBy,
+        };
+
+        this.auditDialog.open(AuditHistoryDialogComponent, {
+            data: auditData,
+            width: '400px',
+            disableClose: false,
+        });
     }
 }

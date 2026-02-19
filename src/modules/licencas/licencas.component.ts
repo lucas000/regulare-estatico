@@ -17,7 +17,7 @@ import { debounceTime, distinctUntilChanged } from 'rxjs/operators';
 import { Subscription } from 'rxjs';
 
 import { LicensesService } from './services/licenses.service';
-import { License, LICENSE_TYPES, daysUntilExpiration } from './models/license.model';
+import { License, LICENSE_TYPES, LICENSE_GROUPS, daysUntilExpiration } from './models/license.model';
 import { LicenseDialogComponent } from './components/license-dialog.component';
 import { SessionService } from '../../core/services/session.service';
 import { CompaniesRepository } from '../cadastros/repositories/companies.repository';
@@ -62,7 +62,8 @@ export class LicencasComponent implements OnInit, OnDestroy {
   dataSource = new MatTableDataSource<License>([]);
   companies: Company[] = [];
   units: Unit[] = [];
-  licenseTypes = LICENSE_TYPES;
+  // Gera lista única de todos os tipos de documento de todos os grupos
+  licenseTypes: string[] = LICENSE_GROUPS.flatMap(g => g.items);
 
   // Colunas
   columns = ['company', 'documentType', 'documentNumber', 'issuingAgency', 'issueDate', 'expirationDate', 'daysRemaining', 'status', 'acoes'];

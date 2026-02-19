@@ -1,6 +1,6 @@
 import {ChangeDetectionStrategy, Component, inject, ChangeDetectorRef} from '@angular/core';
 import {CommonModule} from '@angular/common';
-import {MatDialogRef, MAT_DIALOG_DATA, MatDialogModule} from '@angular/material/dialog';
+import {MatDialogRef, MAT_DIALOG_DATA, MatDialogModule, MatDialog} from '@angular/material/dialog';
 import {ReactiveFormsModule, FormBuilder, FormGroup, Validators, FormControl} from '@angular/forms';
 import {MatFormFieldModule} from '@angular/material/form-field';
 import {ErrorStateMatcher} from '@angular/material/core';
@@ -8,6 +8,8 @@ import {MatInputModule} from '@angular/material/input';
 import {MatButtonModule} from '@angular/material/button';
 import {MatSelectModule} from '@angular/material/select';
 import {MatAutocompleteModule} from '@angular/material/autocomplete';
+import {MatIconModule} from '@angular/material/icon';
+import {MatTooltipModule} from '@angular/material/tooltip';
 import {CompaniesRepository} from '../repositories/companies.repository';
 import {UnitsRepository} from '../repositories/units.repository';
 import {CargosRepository} from '../repositories/cargos.repository';
@@ -16,6 +18,7 @@ import {SessionService} from '../../../core/services/session.service';
 import {CompaniesService} from '../services/companies.service';
 import {debounceTime, distinctUntilChanged, switchMap} from 'rxjs/operators';
 import {Observable, of} from 'rxjs';
+import {AuditHistoryDialogComponent, AuditHistoryData} from '../../../core/components/audit-history-dialog.component';
 
 @Component({
     selector: 'app-employee-dialog',
@@ -29,9 +32,21 @@ import {Observable, of} from 'rxjs';
         MatDialogModule,
         MatSelectModule,
         MatAutocompleteModule,
+        MatIconModule,
+        MatTooltipModule,
     ],
     template: `
-        <h2 mat-dialog-title>Funcionário</h2>
+        <div class="dialog-header">
+            <h2 mat-dialog-title>Funcionário</h2>
+            <button 
+                *ngIf="isEdit" 
+                mat-icon-button 
+                class="audit-btn"
+                matTooltip="Histórico de alterações"
+                (click)="openAuditHistory()">
+                <mat-icon>history</mat-icon>
+            </button>
+        </div>
 
         <mat-dialog-content [formGroup]="form" class="employee-dialog">
             <!-- Identificação / Vínculos -->
@@ -256,6 +271,20 @@ import {Observable, of} from 'rxjs';
         </mat-dialog-actions>
     `,
     styles: [`
+        .dialog-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 0;
+        }
+        .dialog-header h2[mat-dialog-title] { margin: 0; flex: 1; }
+        .dialog-header .audit-btn {
+            color: #757575;
+            transition: color 0.2s ease;
+        }
+        .dialog-header .audit-btn:hover { color: #1565c0; }
+        .dialog-header .audit-btn mat-icon { font-size: 20px; width: 20px; height: 20px; }
+
         .employee-dialog {
             display: block;
         }
@@ -329,6 +358,7 @@ export class EmployeeDialogComponent {
     companiesLoading = false;
     unitsLoading = false;
     private initializing = true;
+    isEdit = false;
 
     constructor(private dialogRef: MatDialogRef<any>, private fb: FormBuilder) {
         this.form = this.fb.group({
@@ -367,6 +397,7 @@ export class EmployeeDialogComponent {
 
             // admissionDate agora é string; não converter para Date
             this.form.patchValue(patch);
+            this.isEdit = !!this.data.id;
 
             // Pre-fill cargo control display if editing
             if ((this.data as any).cargoName) {
@@ -590,5 +621,23 @@ export class EmployeeDialogComponent {
 
     cancel() {
         this.dialogRef.close(null);
+    }
+
+    private readonly auditDialog = inject(MatDialog);
+
+    openAuditHistory(): void {
+        const auditData: AuditHistoryData = {
+            title: 'Funcionário',
+            createdAt: this.data?.createdAt,
+            createdBy: this.data?.createdBy,
+            updatedAt: this.data?.updatedAt,
+            updatedBy: this.data?.updatedBy,
+        };
+
+        this.auditDialog.open(AuditHistoryDialogComponent, {
+            data: auditData,
+            width: '400px',
+            disableClose: false,
+        });
     }
 }

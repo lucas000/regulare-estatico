@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, inject, OnInit, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { MatDialogRef, MatDialogModule, MAT_DIALOG_DATA } from '@angular/material/dialog';
+import { MatDialogRef, MatDialogModule, MAT_DIALOG_DATA, MatDialog } from '@angular/material/dialog';
 import { ReactiveFormsModule, FormBuilder, Validators, FormGroup } from '@angular/forms';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
@@ -8,10 +8,11 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
+import { MatTooltipModule } from '@angular/material/tooltip';
 
 import { LicenseConditionsService } from '../services/license-conditions.service';
-import { LicenseCondition } from '../models/license.model';
 import { StorageService } from '../../../core/services/storage.service';
+import { AuditHistoryDialogComponent, AuditHistoryData } from '../../../core/components/audit-history-dialog.component';
 
 function applyDateMask(value: string): string {
   const nums = value.replace(/\D/g, '').slice(0, 8);
@@ -33,9 +34,20 @@ function applyDateMask(value: string): string {
     MatDialogModule,
     MatSnackBarModule,
     MatProgressBarModule,
+    MatTooltipModule,
   ],
   template: `
-    <h2 mat-dialog-title>{{ isEdit ? 'Editar Condicionante' : 'Nova Condicionante' }}</h2>
+    <div class="dialog-header">
+      <h2 mat-dialog-title>{{ isEdit ? 'Editar Condicionante' : 'Nova Condicionante' }}</h2>
+      <button 
+        *ngIf="isEdit" 
+        mat-icon-button 
+        class="audit-btn"
+        matTooltip="Histórico de alterações"
+        (click)="openAuditHistory()">
+        <mat-icon>history</mat-icon>
+      </button>
+    </div>
 
     <mat-dialog-content>
       <mat-progress-bar *ngIf="saving" mode="indeterminate"></mat-progress-bar>
@@ -89,6 +101,20 @@ function applyDateMask(value: string): string {
     </mat-dialog-actions>
   `,
   styles: [`
+    .dialog-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 0;
+    }
+    .dialog-header h2[mat-dialog-title] { margin: 0; flex: 1; }
+    .dialog-header .audit-btn {
+      color: #757575;
+      transition: color 0.2s ease;
+    }
+    .dialog-header .audit-btn:hover { color: #1565c0; }
+    .dialog-header .audit-btn mat-icon { font-size: 20px; width: 20px; height: 20px; }
+
     .condition-form { padding-top: 16px; }
     .full-width { width: 100%; margin-bottom: 5px}
     mat-dialog-content { min-width: 400px; }
@@ -151,6 +177,7 @@ export class ConditionDialogComponent implements OnInit {
   private readonly snack = inject(MatSnackBar);
   private readonly cd = inject(ChangeDetectorRef);
   private readonly storage = inject(StorageService);
+  private readonly auditDialog = inject(MatDialog);
 
   ngOnInit(): void {
     this.initForm();
@@ -275,5 +302,21 @@ export class ConditionDialogComponent implements OnInit {
 
   cancel(): void {
     this.dialogRef.close(false);
+  }
+
+  openAuditHistory(): void {
+    const auditData: AuditHistoryData = {
+      title: 'Condicionante',
+      createdAt: this.data?.createdAt,
+      createdBy: this.data?.createdBy,
+      updatedAt: this.data?.updatedAt,
+      updatedBy: this.data?.updatedBy,
+    };
+
+    this.auditDialog.open(AuditHistoryDialogComponent, {
+      data: auditData,
+      width: '400px',
+      disableClose: false,
+    });
   }
 }

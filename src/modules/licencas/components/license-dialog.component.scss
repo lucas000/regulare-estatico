@@ -2,6 +2,34 @@
   padding-top: 16px;
 }
 
+/* Header do dialog com botão de histórico */
+.dialog-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0;
+
+  h2[mat-dialog-title] {
+    margin: 0;
+    flex: 1;
+  }
+
+  .audit-btn {
+    color: #757575;
+    transition: color 0.2s ease;
+
+    &:hover {
+      color: #1565c0;
+    }
+
+    mat-icon {
+      font-size: 20px;
+      width: 20px;
+      height: 20px;
+    }
+  }
+}
+
 .full-width {
   width: 100%;
 }
@@ -146,6 +174,24 @@
   }
 }
 
+/* Seção Responsável Técnico pela Elaboração */
+.technical-responsible-section {
+  margin: 16px 0;
+
+  mat-divider {
+    margin: 16px 0;
+  }
+
+  .section-title {
+    font-size: 14px;
+    font-weight: 500;
+    color: #1565c0;
+    margin: 0 0 16px 0;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+}
+
 @media (max-width: 600px) {
   .form-row {
     flex-direction: column;
@@ -159,7 +205,32 @@
   }
 }
 
-mat-dialog-content {
-  max-height: 70vh;
-  overflow-y: auto;
+/* Controle único de scroll no dialog */
+:host ::ng-deep {
+  .mat-mdc-dialog-container {
+    max-height: 90vh;
+  }
+
+  .mat-mdc-dialog-content {
+    max-height: calc(90vh - 130px) !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    padding: 0 24px !important;
+  }
+
+  .mat-mdc-dialog-actions {
+    padding: 12px 24px !important;
+  }
+}
+
+/* Remove scroll interno de elementos filhos */
+.license-form,
+.conditions-section,
+.technical-responsible-section {
+  overflow: visible;
+}
+
+.conditions-table {
+  overflow-x: auto;
+  max-width: 100%;
 }

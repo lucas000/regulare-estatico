@@ -1,11 +1,14 @@
 import { ChangeDetectionStrategy, ChangeDetectorRef, Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
+import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef, MatDialog } from '@angular/material/dialog';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 import { MatButtonModule } from '@angular/material/button';
+import { MatIconModule } from '@angular/material/icon';
+import { MatTooltipModule } from '@angular/material/tooltip';
+import { AuditHistoryDialogComponent, AuditHistoryData } from '../../../core/components/audit-history-dialog.component';
 
 function toUpperSafe(v: any): string {
   return String(v ?? '').trim().toUpperCase();
@@ -22,9 +25,21 @@ function toUpperSafe(v: any): string {
     MatInputModule,
     MatSelectModule,
     MatButtonModule,
+    MatIconModule,
+    MatTooltipModule,
   ],
   template: `
-    <h2 mat-dialog-title>EPI / EPC</h2>
+    <div class="dialog-header">
+      <h2 mat-dialog-title>EPI / EPC</h2>
+      <button 
+        *ngIf="isEdit" 
+        mat-icon-button 
+        class="audit-btn"
+        matTooltip="Histórico de alterações"
+        (click)="openAuditHistory()">
+        <mat-icon>history</mat-icon>
+      </button>
+    </div>
 
     <mat-dialog-content [formGroup]="form" class="equipment-dialog">
       <mat-form-field appearance="fill" class="full">
@@ -98,6 +113,20 @@ function toUpperSafe(v: any): string {
     </mat-dialog-actions>
   `,
   styles: [`
+    .dialog-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 0;
+    }
+    .dialog-header h2[mat-dialog-title] { margin: 0; flex: 1; }
+    .dialog-header .audit-btn {
+      color: #757575;
+      transition: color 0.2s ease;
+    }
+    .dialog-header .audit-btn:hover { color: #1565c0; }
+    .dialog-header .audit-btn mat-icon { font-size: 20px; width: 20px; height: 20px; }
+
     .equipment-dialog { display: block; }
     .full { width: 100%; }
     .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
@@ -110,8 +139,10 @@ export class EquipmentDialogComponent {
   private readonly data = inject(MAT_DIALOG_DATA, { optional: true }) as any;
   private readonly fb = inject(FormBuilder);
   private readonly cd = inject(ChangeDetectorRef);
+  private readonly auditDialog = inject(MatDialog);
 
   submitted = false;
+  isEdit = false;
 
   form = this.fb.group({
     name: ['', [Validators.required]],
@@ -129,6 +160,7 @@ export class EquipmentDialogComponent {
       // validUntil já é string dd/MM/aaaa - não converter
       this.form.patchValue(patch);
       this.form.patchValue({ name: toUpperSafe(patch?.name) }, { emitEvent: false });
+      this.isEdit = !!this.data.id;
     }
 
     this.form.get('hasCertification')?.valueChanges.subscribe((v) => {
@@ -204,5 +236,21 @@ export class EquipmentDialogComponent {
 
   cancel() {
     this.dialogRef.close(null);
+  }
+
+  openAuditHistory(): void {
+    const auditData: AuditHistoryData = {
+      title: 'EPI / EPC',
+      createdAt: this.data?.createdAt,
+      createdBy: this.data?.createdBy,
+      updatedAt: this.data?.updatedAt,
+      updatedBy: this.data?.updatedBy,
+    };
+
+    this.auditDialog.open(AuditHistoryDialogComponent, {
+      data: auditData,
+      width: '400px',
+      disableClose: false,
+    });
   }
 }

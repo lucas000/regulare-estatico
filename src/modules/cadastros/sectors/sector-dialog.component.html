@@ -1,4 +1,14 @@
-<h2 mat-dialog-title>Setor</h2>
+<div class="dialog-header">
+  <h2 mat-dialog-title>Setor</h2>
+  <button
+    *ngIf="isEdit"
+    mat-icon-button
+    class="audit-btn"
+    matTooltip="Histórico de alterações"
+    (click)="openAuditHistory()">
+    <mat-icon>history</mat-icon>
+  </button>
+</div>
 <mat-dialog-content [formGroup]="form" class="sector-dialog">
   <h3 class="section-title">Dados do Setor</h3>
 

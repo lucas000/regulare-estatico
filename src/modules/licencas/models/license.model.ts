@@ -5,14 +5,18 @@ export interface AuditUser {
 }
 
 export type LicenseStatus = 'em_dia' | 'a_vencer' | 'vencida';
+export type LicensePeriodicity = 'Anual' | 'Bienal' | 'Trienal' | 'Eventual' | 'Contínuo (sem vencimento)';
 
 export interface License {
   id: string;
   companyId: string;
   unitId: string;
+  documentGroup: string;
   documentType: string;
   documentNumber: string;
   issuingAgency: string;
+  legalBasis: string; // Base Legal / Referência Normativa (obrigatório, até 150 caracteres)
+  periodicity?: LicensePeriodicity; // Periodicidade
   issueDate: string; // dd/mm/yyyy
   expirationDate: string; // dd/mm/yyyy
   status: LicenseStatus;
@@ -20,6 +24,14 @@ export interface License {
   pdfName?: string; // nome do arquivo PDF armazenado
   pdfContentType?: string; // content-type do arquivo
   notes?: string;
+
+  // Responsável Técnico pela Elaboração (obrigatório para Programas de SST)
+  technicalResponsibleName?: string; // Nome completo
+  technicalResponsibleCpf?: string; // CPF
+  technicalResponsibleCouncil?: string; // Conselho de Classe
+  technicalResponsibleRegistration?: string; // Nº de Registro
+  technicalResponsibleArt?: string; // Nº da ART
+
   createdAt: string;
   updatedAt?: string;
   createdBy: AuditUser;
@@ -27,6 +39,15 @@ export interface License {
 }
 
 export type ConditionStatus = 'pendente' | 'a_vencer' | 'cumprida' | 'vencida';
+
+// Opções de periodicidade
+export const PERIODICITY_OPTIONS: LicensePeriodicity[] = [
+  'Anual',
+  'Bienal',
+  'Trienal',
+  'Eventual',
+  'Contínuo (sem vencimento)'
+];
 
 export interface LicenseCondition {
   id: string;
@@ -45,7 +66,85 @@ export interface LicenseCondition {
   updatedBy?: AuditUser;
 }
 
-// Tipos de licença padrão
+// Grupos de documentos regulatórios
+export interface LicenseGroup {
+  group: string;
+  items: string[];
+}
+
+export const LICENSE_GROUPS: LicenseGroup[] = [
+  {
+    group: 'Licenciamento Ambiental',
+    items: [
+      'Licença Prévia (LP)',
+      'Licença de Instalação (LI)',
+      'Licença de Operação (LO)',
+      'Renovação da LO',
+      'Dispensa de Licenciamento',
+      'Declaração de Uso Insignificante (DUI)',
+      'Outorga de Água',
+      'Autorização Ambiental'
+    ]
+  },
+  {
+    group: 'Documentos Rurais / Florestais',
+    items: [
+      'Cadastro Ambiental Rural (CAR)',
+      'Certificado de Cadastro de Imóvel Rural (CCIR)',
+      'Autorização de Exploração Florestal (AEF)',
+      'Documento de Origem Florestal (DOF)'
+    ]
+  },
+  {
+    group: 'Resíduos e Logística Reversa',
+    items: [
+      'Plano de Gerenciamento de Resíduos Sólidos (PGRS)',
+      'Manifesto de Transporte de Resíduos (MTR)',
+      'Certificado de Destinação Final (CDF)',
+      'Recibo de Devolução de Embalagens Vazias',
+      'Logística Reversa (Certificados e Créditos)',
+      'Termo de Credenciamento da Central de Embalagens Vazias',
+      'Termo de Credenciamento com o inpEV'
+    ]
+  },
+  {
+    group: 'Registros e Cadastros Obrigatórios',
+    items: [
+      'Registro IBAMA',
+      'CTF',
+      'CTDAM',
+      'Registro no CREA (Empresa)',
+      'ART – CREA'
+    ]
+  },
+  {
+    group: 'Municipais e Sanitários',
+    items: [
+      'AVCB',
+      'Alvará de Funcionamento',
+      'Licença Sanitária',
+      'Certidão de Uso e Ocupação do Solo',
+      'Certidão de Inteiro Teor',
+      'Certificado de Desinsetização e Desratização'
+    ]
+  },
+  {
+    group: 'Transporte',
+    items: [
+      'Autorização para Transporte de Produto Perigoso'
+    ]
+  },
+  {
+    group: 'Programas de SST',
+    items: [
+      'Programa de Gerenciamento de Riscos (PGR / PGRTR)',
+      'Programa de Controle Médico de Saúde Ocupacional (PCMSO)',
+      'Laudo Técnico das Condições Ambientais do Trabalho (LTCAT)'
+    ]
+  }
+];
+
+// Tipos de licença padrão (mantido para compatibilidade)
 export const LICENSE_TYPES = [
   'Licença Ambiental',
   'Licença Prévia (LP)',

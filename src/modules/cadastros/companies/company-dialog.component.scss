@@ -1,3 +1,31 @@
+/* Header do dialog com botão de histórico */
+.dialog-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0;
+
+  h2[mat-dialog-title] {
+    margin: 0;
+    flex: 1;
+  }
+
+  .audit-btn {
+    color: #757575;
+    transition: color 0.2s ease;
+
+    &:hover {
+      color: #1565c0;
+    }
+
+    mat-icon {
+      font-size: 20px;
+      width: 20px;
+      height: 20px;
+    }
+  }
+}
+
 .company-dialog {
   .section-title {
     margin: 16px 0 8px;
