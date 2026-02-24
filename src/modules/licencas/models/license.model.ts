@@ -25,6 +25,9 @@ export interface License {
   pdfContentType?: string; // content-type do arquivo
   notes?: string;
 
+  // Matrículas rurais (obrigatório para Cadastro Ambiental Rural - CAR)
+  ruralRegistrations?: string; // Matrículas do imóvel rural
+
   // Responsável Técnico pela Elaboração (obrigatório para Programas de SST)
   technicalResponsibleName?: string; // Nome completo
   technicalResponsibleCpf?: string; // CPF
@@ -128,7 +131,7 @@ export const LICENSE_GROUPS: LicenseGroup[] = [
     ]
   },
   {
-    group: 'Municipais e Sanitários',
+    group: 'Alvarás e Certidões',
     items: [
       'AVCB',
       'Alvará de Funcionamento',
@@ -145,7 +148,7 @@ export const LICENSE_GROUPS: LicenseGroup[] = [
     ]
   },
   {
-    group: 'Programas de SST',
+    group: 'Documentação Técnica Ocupacional (SST)',
     items: [
       'Programa de Gerenciamento de Riscos (PGR / PGRTR)',
       'Programa de Controle Médico de Saúde Ocupacional (PCMSO)',

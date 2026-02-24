@@ -58,6 +58,14 @@
       </mat-form-field>
     </div>
 
+    <!-- Matrículas do imóvel rural (apenas para Cadastro Ambiental Rural - CAR) -->
+    <mat-form-field *ngIf="isCAR" appearance="outline" class="full-width">
+      <mat-label>Matrículas do Imóvel Rural</mat-label>
+      <textarea matInput formControlName="ruralRegistrations" rows="2" placeholder="Informe as matrículas separadas por vírgula"></textarea>
+      <mat-hint>Matrículas do(s) imóvel(is) rural(is) vinculado(s) ao CAR</mat-hint>
+      <mat-error *ngIf="form.get('ruralRegistrations')?.hasError('required')">Obrigatório</mat-error>
+    </mat-form-field>
+
     <div class="form-row">
       <mat-form-field appearance="outline">
         <mat-label>Órgão Emissor</mat-label>

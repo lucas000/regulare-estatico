@@ -6,6 +6,9 @@ export interface Employee {
   unitId: string;
   sectorId: string;
   name: string;
+  socialName?: string;
+  rg?: string;
+  rgIssuingAgency?: string;
   cpf?: string;
   cargoId: string;
   cargoName: string;
@@ -25,6 +28,13 @@ export interface Employee {
 
   // Campo opcional (cadastro/edição apenas)
   jobDescription?: string;
+
+  // Endereço
+  addressStreet?: string;
+  addressComplement?: string;
+  addressZipCode?: string;
+  addressUf?: string;
+  addressCity?: string;
 
   // Opcionais
   phone?: string;

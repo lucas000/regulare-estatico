@@ -16,6 +16,7 @@ import {CargosRepository} from '../repositories/cargos.repository';
 import {SectorsFiltersRepository} from '../repositories/sectors-filters.repository';
 import {SessionService} from '../../../core/services/session.service';
 import {CompaniesService} from '../services/companies.service';
+import {LocalidadesService, Estado, Municipio} from '../../../core/services/localidades.service';
 import {debounceTime, distinctUntilChanged, switchMap} from 'rxjs/operators';
 import {Observable, of} from 'rxjs';
 import {AuditHistoryDialogComponent, AuditHistoryData} from '../../../core/components/audit-history-dialog.component';
@@ -90,6 +91,23 @@ import {AuditHistoryDialogComponent, AuditHistoryData} from '../../../core/compo
                 <mat-error *ngIf="(submitted || form.get('name')?.touched) && form.get('name')?.invalid">Obrigatório
                 </mat-error>
             </mat-form-field>
+
+            <mat-form-field appearance="fill" class="full">
+                <mat-label>Nome Social</mat-label>
+                <input matInput formControlName="socialName"/>
+            </mat-form-field>
+
+            <div class="grid">
+                <mat-form-field appearance="fill">
+                    <mat-label>RG</mat-label>
+                    <input matInput formControlName="rg"/>
+                </mat-form-field>
+
+                <mat-form-field appearance="fill">
+                    <mat-label>Órgão Emissor</mat-label>
+                    <input matInput formControlName="rgIssuingAgency" placeholder="Ex: SSP/SP"/>
+                </mat-form-field>
+            </div>
 
             <div class="grid">
                 <mat-form-field appearance="fill">
@@ -232,6 +250,45 @@ import {AuditHistoryDialogComponent, AuditHistoryData} from '../../../core/compo
                 </mat-error>
             </mat-form-field>
 
+            <!-- Endereço -->
+            <h3 class="section-title">Endereço</h3>
+            <mat-form-field appearance="fill" class="full">
+                <mat-label>Logradouro</mat-label>
+                <input matInput formControlName="addressStreet" />
+                <mat-error *ngIf="(submitted || form.get('addressStreet')?.touched) && form.get('addressStreet')?.invalid">Obrigatório</mat-error>
+            </mat-form-field>
+
+            <div class="grid">
+                <mat-form-field appearance="fill">
+                    <mat-label>Complemento</mat-label>
+                    <input matInput formControlName="addressComplement" />
+                </mat-form-field>
+
+                <mat-form-field appearance="fill">
+                    <mat-label>CEP</mat-label>
+                    <input matInput formControlName="addressZipCode" placeholder="00000-000" />
+                </mat-form-field>
+            </div>
+
+            <div class="grid">
+                <mat-form-field appearance="fill">
+                    <mat-label>UF</mat-label>
+                    <mat-select formControlName="addressUf">
+                        <mat-option *ngFor="let e of estados" [value]="e.sigla">{{ e.sigla }} - {{ e.nome }}</mat-option>
+                    </mat-select>
+                    <mat-error *ngIf="(submitted || form.get('addressUf')?.touched) && form.get('addressUf')?.invalid">Obrigatório</mat-error>
+                </mat-form-field>
+
+                <mat-form-field appearance="fill">
+                    <mat-label>Município</mat-label>
+                    <mat-select formControlName="addressCity" [disabled]="!form.get('addressUf')?.value || municipiosLoading">
+                        <mat-option *ngIf="municipiosLoading" disabled>Carregando municípios...</mat-option>
+                        <mat-option *ngFor="let m of municipios" [value]="m.nome">{{ m.nome }}</mat-option>
+                    </mat-select>
+                    <mat-error *ngIf="(submitted || form.get('addressCity')?.touched) && form.get('addressCity')?.invalid">Obrigatório</mat-error>
+                </mat-form-field>
+            </div>
+
             <div class="grid">
                 <mat-form-field appearance="fill">
                     <mat-label>Situação</mat-label>
@@ -304,6 +361,15 @@ import {AuditHistoryDialogComponent, AuditHistoryData} from '../../../core/compo
                 grid-template-columns: 1fr;
             }
         }
+
+        .section-title {
+            font-size: 14px;
+            font-weight: 500;
+            color: #1565c0;
+            margin: 16px 0 8px 0;
+            border-bottom: 1px solid #e0e0e0;
+            padding-bottom: 4px;
+        }
     `],
     changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -360,12 +426,21 @@ export class EmployeeDialogComponent {
     private initializing = true;
     isEdit = false;
 
+    // Endereço - estados e municípios
+    private readonly localidades = inject(LocalidadesService);
+    estados: Estado[] = [];
+    municipios: Municipio[] = [];
+    municipiosLoading = false;
+
     constructor(private dialogRef: MatDialogRef<any>, private fb: FormBuilder) {
         this.form = this.fb.group({
             companyId: ['', [Validators.required]],
             unitId: ['', [Validators.required]],
             sectorId: ['', [Validators.required]],
             name: ['', [Validators.required]],
+            socialName: [''],
+            rg: [''],
+            rgIssuingAgency: [''],
             cpf: ['', [Validators.required]],
             cargoId: ['', [Validators.required]],
 
@@ -388,6 +463,13 @@ export class EmployeeDialogComponent {
             gender: ['', [Validators.required]],
             fatherName: [''],
             motherName: [''],
+
+            // Endereço
+            addressStreet: ['', [Validators.required]],
+            addressComplement: [''],
+            addressZipCode: [''],
+            addressUf: ['', [Validators.required]],
+            addressCity: ['', [Validators.required]],
 
             status: ['ativo'],
         });
@@ -417,6 +499,19 @@ export class EmployeeDialogComponent {
 
         // Carrega empresas e (se edição) unidades/setores antes de liberar a UI
         this.bootstrapInitialData();
+
+        // Carrega estados para o endereço
+        this.loadEstados();
+
+        // When addressUf changes, reload municipalities
+        this.form.get('addressUf')?.valueChanges.subscribe((uf: string | null) => {
+            this.form.get('addressCity')?.setValue('');
+            this.municipios = [];
+            if (uf) {
+                this.loadMunicipiosForUf(uf);
+            }
+            this.cd.markForCheck();
+        });
 
         // When company changes, refresh units and clear selected unit
         this.form.get('companyId')?.valueChanges.subscribe(async (v: string | null) => {
@@ -587,6 +682,49 @@ export class EmployeeDialogComponent {
 
     private toUpperSafe(v: any): string {
         return String(v ?? '').trim().toUpperCase();
+    }
+
+    private loadEstados(): void {
+        this.localidades.getEstados().subscribe({
+            next: (estados) => {
+                this.estados = estados.sort((a, b) => a.nome.localeCompare(b.nome));
+                // Se em modo de edição e já tem UF, carrega municípios
+                const uf = this.form.get('addressUf')?.value as string;
+                const city = this.form.get('addressCity')?.value as string;
+                if (uf) {
+                    this.loadMunicipiosForUf(uf, city);
+                }
+                this.cd.markForCheck();
+            },
+            error: () => {
+                console.error('Erro ao carregar estados.');
+                this.cd.markForCheck();
+            },
+        });
+    }
+
+    private loadMunicipiosForUf(uf: string, keepSelectedCity?: string): void {
+        this.municipiosLoading = true;
+        this.cd.markForCheck();
+        this.localidades.getMunicipiosByUF(uf).subscribe({
+            next: (municipios) => {
+                this.municipios = municipios.sort((a, b) => a.nome.localeCompare(b.nome));
+                this.municipiosLoading = false;
+
+                if (keepSelectedCity) {
+                    const exists = this.municipios.some((m) => m.nome === keepSelectedCity);
+                    if (exists) {
+                        this.form.get('addressCity')?.setValue(keepSelectedCity, {emitEvent: false});
+                    }
+                }
+                this.cd.markForCheck();
+            },
+            error: () => {
+                this.municipiosLoading = false;
+                console.error('Erro ao carregar municípios.');
+                this.cd.markForCheck();
+            },
+        });
     }
 
     save() {

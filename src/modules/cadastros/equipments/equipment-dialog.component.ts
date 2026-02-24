@@ -59,6 +59,13 @@ function toUpperSafe(v: any): string {
         </mat-form-field>
 
         <mat-form-field appearance="fill">
+          <mat-label>Fabricante</mat-label>
+          <input matInput formControlName="manufacturer" />
+        </mat-form-field>
+      </div>
+
+      <div class="grid">
+        <mat-form-field appearance="fill">
           <mat-label>Possui CA / Norma Técnica</mat-label>
           <mat-select formControlName="hasCertification">
             <mat-option [value]="true">Sim</mat-option>
@@ -66,17 +73,65 @@ function toUpperSafe(v: any): string {
           </mat-select>
           <mat-error *ngIf="(submitted || form.get('hasCertification')?.touched) && form.get('hasCertification')?.invalid">Obrigatório</mat-error>
         </mat-form-field>
-      </div>
 
-      <div class="grid">
         <mat-form-field appearance="fill">
           <mat-label>Número do CA / Norma</mat-label>
           <input matInput formControlName="certificationNumber" [disabled]="form.get('hasCertification')?.value === false" />
           <mat-error *ngIf="(submitted || form.get('certificationNumber')?.touched) && form.get('certificationNumber')?.invalid">Obrigatório</mat-error>
         </mat-form-field>
+      </div>
 
+      <!-- Campos específicos para EPI -->
+      <ng-container *ngIf="form.get('type')?.value === 'EPI'">
+        <div class="grid">
+          <mat-form-field appearance="fill">
+            <mat-label>Validade do EPI</mat-label>
+            <input
+              matInput
+              formControlName="epiExpirationDate"
+              placeholder="dd/MM/aaaa"
+              inputmode="numeric"
+              autocomplete="off"
+              maxlength="10"
+              (input)="onEpiExpirationDateInput($event)"
+            />
+            <mat-error *ngIf="(submitted || form.get('epiExpirationDate')?.touched) && form.get('epiExpirationDate')?.hasError('pattern')">Data inválida (use dd/MM/aaaa)</mat-error>
+          </mat-form-field>
+
+          <mat-form-field appearance="fill">
+            <mat-label>Tamanho do EPI</mat-label>
+            <mat-select formControlName="epiSize">
+              <mat-option value="">Não aplicável</mat-option>
+              <mat-option value="PP">PP</mat-option>
+              <mat-option value="P">P</mat-option>
+              <mat-option value="M">M</mat-option>
+              <mat-option value="G">G</mat-option>
+              <mat-option value="GG">GG</mat-option>
+              <mat-option value="XG">XG</mat-option>
+              <mat-option value="Único">Tamanho Único</mat-option>
+            </mat-select>
+          </mat-form-field>
+        </div>
+      </ng-container>
+
+      <!-- Campos específicos para EPC -->
+      <ng-container *ngIf="form.get('type')?.value === 'EPC'">
+        <div class="grid">
+          <mat-form-field appearance="fill">
+            <mat-label>Nº do Laudo</mat-label>
+            <input matInput formControlName="reportNumber" />
+          </mat-form-field>
+
+          <mat-form-field appearance="fill">
+            <mat-label>Nº do Certificado de Manutenção</mat-label>
+            <input matInput formControlName="maintenanceCertificateNumber" />
+          </mat-form-field>
+        </div>
+      </ng-container>
+
+      <div class="grid">
         <mat-form-field appearance="fill">
-          <mat-label>Validade</mat-label>
+          <mat-label>Validade CA</mat-label>
           <input
             matInput
             formControlName="validUntil"
@@ -89,9 +144,7 @@ function toUpperSafe(v: any): string {
           />
           <mat-error *ngIf="(submitted || form.get('validUntil')?.touched) && form.get('validUntil')?.hasError('pattern')">Data inválida (use dd/MM/aaaa)</mat-error>
         </mat-form-field>
-      </div>
 
-      <div class="grid">
         <mat-form-field appearance="fill">
           <mat-label>Situação</mat-label>
           <mat-select formControlName="status">
@@ -147,9 +200,16 @@ export class EquipmentDialogComponent {
   form = this.fb.group({
     name: ['', [Validators.required]],
     type: ['EPI', [Validators.required]],
+    manufacturer: [''],
     hasCertification: [true as any, [Validators.required]],
     certificationNumber: ['', []],
     validUntil: ['', [Validators.pattern(/^\d{2}\/\d{2}\/\d{4}$/)]],
+    // Campos EPI
+    epiExpirationDate: ['', [Validators.pattern(/^\d{2}\/\d{2}\/\d{4}$/)]],
+    epiSize: [''],
+    // Campos EPC
+    reportNumber: [''],
+    maintenanceCertificateNumber: [''],
     notes: [''],
     status: ['ativo', [Validators.required]],
   });
@@ -206,6 +266,22 @@ export class EquipmentDialogComponent {
 
     if (masked !== this.form.get('validUntil')?.value) {
       this.form.get('validUntil')?.setValue(masked, { emitEvent: false });
+    }
+  }
+
+  onEpiExpirationDateInput(evt: Event) {
+    const el = evt.target as HTMLInputElement;
+    const raw = (el?.value ?? '').toString();
+
+    // mantém apenas dígitos e aplica máscara dd/MM/aaaa
+    const digits = raw.replace(/\D/g, '').slice(0, 8);
+    let masked = '';
+    if (digits.length <= 2) masked = digits;
+    else if (digits.length <= 4) masked = `${digits.slice(0, 2)}/${digits.slice(2)}`;
+    else masked = `${digits.slice(0, 2)}/${digits.slice(2, 4)}/${digits.slice(4)}`;
+
+    if (masked !== this.form.get('epiExpirationDate')?.value) {
+      this.form.get('epiExpirationDate')?.setValue(masked, { emitEvent: false });
     }
   }
 

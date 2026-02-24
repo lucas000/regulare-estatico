@@ -8,9 +8,15 @@
 <!--      <input type="file" #fileInput accept=".csv,text/csv" style="display:none" (change)="handleFile($any($event.target).files && $any($event.target).files[0])" />-->
 <!--      <button mat-stroked-button color="accent" style="margin-left:8px" (click)="fileInput.click()" [disabled]="importing">Importar CBO (CSV)</button>-->
     </div>
-    <div>
+    <div *ngIf="!isCliente && !hasAdminScope">
       <button mat-flat-button color="primary" (click)="newCargo()">Novo Cargo</button>
     </div>
+  </div>
+
+  <!-- Aviso para CLIENTE ou ADMIN com empresa selecionada -->
+  <div *ngIf="isCliente || hasAdminScope" class="client-info-banner" style="background-color:#e3f2fd;border-radius:4px;padding:8px 12px;margin-bottom:12px;display:flex;align-items:center;gap:8px;">
+    <mat-icon style="color:#1976d2;font-size:18px;width:18px;height:18px;">info</mat-icon>
+    <span style="color:#1565c0;font-size:13px;">Visualização baseada nos funcionários cadastrados da empresa.</span>
   </div>
 
   <mat-progress-bar *ngIf="loading" mode="indeterminate"></mat-progress-bar>
@@ -44,7 +50,7 @@
     </ng-container>
 
     <tr mat-header-row *matHeaderRowDef="columns"></tr>
-    <tr mat-row *matRowDef="let row; columns: columns"></tr>
+    <tr mat-row *matRowDef="let row; columns: columns" [style.cursor]="(isCliente || hasAdminScope) ? 'pointer' : 'default'" (click)="(isCliente || hasAdminScope) && viewCargo(row)"></tr>
   </table>
     <br>
   <mat-paginator [pageSize]="pageSize" [pageSizeOptions]="[30]" [length]="total" (page)="onPage($event)"></mat-paginator>

@@ -20,6 +20,7 @@ import { CnaeService, Cnae } from '../../../core/services/cnae.service';
 import { Subscription, debounceTime, distinctUntilChanged, switchMap, of, catchError, finalize } from 'rxjs';
 import { SessionService } from '../../../core/services/session.service';
 import { AuditHistoryDialogComponent, AuditHistoryData } from '../../../core/components/audit-history-dialog.component';
+import { MapCoordinatesDialogComponent, MapCoordinatesResult } from '../../../core/components/map-coordinates-dialog.component';
 import {MatTooltipModule} from "@angular/material/tooltip";
 
 function cnaeToCompanyCnae(c: Cnae | CompanyCnae | string | null | undefined): CompanyCnae {
@@ -161,11 +162,25 @@ function toUpperSafe(v: any): string {
         </mat-chip-listbox>
       </div>
 
+      <!-- Endereço -->
+      <h3 class="section-title">Endereço</h3>
       <mat-form-field appearance="fill" style="width:100%">
         <mat-label>Logradouro</mat-label>
         <input matInput formControlName="street" />
         <mat-error *ngIf="(submitted || form.controls['street']?.touched) && form.controls['street']?.invalid">Obrigatório</mat-error>
       </mat-form-field>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <mat-form-field appearance="fill" style="width:100%">
+          <mat-label>Complemento</mat-label>
+          <input matInput formControlName="complement" />
+        </mat-form-field>
+
+        <mat-form-field appearance="fill" style="width:100%">
+          <mat-label>CEP</mat-label>
+          <input matInput formControlName="zipCode" placeholder="00000-000" />
+        </mat-form-field>
+      </div>
 
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
         <mat-form-field appearance="fill" style="width:100%">
@@ -184,6 +199,25 @@ function toUpperSafe(v: any): string {
           </mat-select>
           <mat-error *ngIf="(submitted || form.controls['city']?.touched) && form.controls['city']?.invalid">Cidade é obrigatória</mat-error>
         </mat-form-field>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <mat-form-field appearance="fill" style="width:100%">
+          <mat-label>Latitude</mat-label>
+          <input matInput formControlName="latitude" type="text" readonly />
+        </mat-form-field>
+
+        <mat-form-field appearance="fill" style="width:100%">
+          <mat-label>Longitude</mat-label>
+          <input matInput formControlName="longitude" type="text" readonly />
+        </mat-form-field>
+      </div>
+
+      <div style="padding: 8px 0;">
+        <button mat-stroked-button color="primary" type="button" (click)="openMapCoordinates()">
+          <mat-icon>place</mat-icon>
+          Selecionar Coordenadas
+        </button>
       </div>
 
       <mat-form-field appearance="fill" style="width:100%">
@@ -247,6 +281,15 @@ function toUpperSafe(v: any): string {
     }
     .dialog-header .audit-btn:hover { color: #1565c0; }
     .dialog-header .audit-btn mat-icon { font-size: 20px; width: 20px; height: 20px; }
+
+    .section-title {
+      font-size: 14px;
+      font-weight: 500;
+      color: #1565c0;
+      margin: 16px 0 8px 0;
+      border-bottom: 1px solid #e0e0e0;
+      padding-bottom: 4px;
+    }
   `],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -292,8 +335,12 @@ export class UnitDialogComponent implements OnInit, OnDestroy {
       // cnaeMain/cnaeSecondary agora controlados fora do form (autocomplete)
 
       street: ['', [Validators.required]],
+      complement: [''],
+      zipCode: [''],
       city: ['', [Validators.required]],
       state: ['', [Validators.required]],
+      latitude: [''],
+      longitude: [''],
 
       workEnvironmentDescription: ['', [Validators.required]],
 
@@ -313,8 +360,12 @@ export class UnitDialogComponent implements OnInit, OnDestroy {
         documentType: d.documentType ?? 'CNPJ',
         documentNumber: d.documentNumber ?? '',
         street: d.address?.street ?? d.street ?? '',
+        complement: d.address?.complement ?? d.complement ?? '',
+        zipCode: d.address?.zipCode ?? d.zipCode ?? '',
         state: d.address?.state ?? d.state ?? '',
         city: d.address?.city ?? d.city ?? '',
+        latitude: d.address?.latitude ?? d.latitude ?? '',
+        longitude: d.address?.longitude ?? d.longitude ?? '',
         workEnvironmentDescription: d.workEnvironmentDescription ?? '',
         email: d.email ?? '',
         phone: d.phone ?? '',
@@ -538,8 +589,12 @@ export class UnitDialogComponent implements OnInit, OnDestroy {
 
       address: {
         street: raw.street,
+        complement: raw.complement || null,
+        zipCode: raw.zipCode || null,
         city: raw.city,
         state: raw.state,
+        latitude: raw.latitude || null,
+        longitude: raw.longitude || null,
       },
       workEnvironmentDescription: raw.workEnvironmentDescription,
       // nunca enviar undefined para o Firestore
@@ -551,6 +606,8 @@ export class UnitDialogComponent implements OnInit, OnDestroy {
       // backward compatibility
       city: raw.city,
       state: raw.state,
+      latitude: raw.latitude || null,
+      longitude: raw.longitude || null,
     };
 
     this.dialogRef.close(payload);
@@ -579,6 +636,29 @@ export class UnitDialogComponent implements OnInit, OnDestroy {
       data: auditData,
       width: '400px',
       disableClose: false,
+    });
+  }
+
+  openMapCoordinates(): void {
+    const currentLat = this.form.get('latitude')?.value;
+    const currentLng = this.form.get('longitude')?.value;
+
+    const dialogRef = this.auditDialog.open(MapCoordinatesDialogComponent, {
+      data: {
+        latitude: currentLat ? parseFloat(currentLat) : undefined,
+        longitude: currentLng ? parseFloat(currentLng) : undefined,
+      },
+      width: '600px',
+      maxWidth: '95vw',
+      disableClose: true,
+    });
+
+    dialogRef.afterClosed().subscribe((result: MapCoordinatesResult | undefined) => {
+      if (result) {
+        this.form.get('latitude')?.setValue(result.latitude.toString());
+        this.form.get('longitude')?.setValue(result.longitude.toString());
+        this.cd.markForCheck();
+      }
     });
   }
 }

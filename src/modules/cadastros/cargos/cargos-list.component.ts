@@ -55,6 +55,11 @@ export class CargosListComponent implements OnInit, OnDestroy {
     loading = false;
     importing = false;
 
+    // Controle de perfil
+    isCliente = false;
+    isAdmin = false;
+    hasAdminScope = false; // ADMIN com empresa selecionada
+
     searchControl = new FormControl('');
     private subs: Subscription | null = null;
 
@@ -65,6 +70,16 @@ export class CargosListComponent implements OnInit, OnDestroy {
     @ViewChild(MatPaginator) paginator?: MatPaginator;
 
     ngOnInit(): void {
+        // Detectar perfil do usuário
+        this.isCliente = this.cargosService.isCliente();
+        this.isAdmin = this.cargosService.isAdmin();
+        this.hasAdminScope = this.cargosService.hasAdminScopeCompany();
+
+        // Para CLIENTE ou ADMIN com empresa selecionada, ocultar coluna de ações
+        if (this.isCliente || this.hasAdminScope) {
+            this.columns = ['name', 'cbo', 'status'];
+        }
+
         this.subs = this.searchControl.valueChanges.pipe(debounceTime(300), distinctUntilChanged()).subscribe((v: string | null) => {
             this.filterTerm = v ?? '';
             this.loadPage(0, true);
@@ -85,18 +100,46 @@ export class CargosListComponent implements OnInit, OnDestroy {
         this.loading = true;
         const reqId = ++this._reqId;
         try {
-            const startAfterDoc = index > 0 ? this.cursors[index - 1] : undefined;
-            const res: any = await this.cargosService.listCargosPaged(this.filterTerm, this.pageSize, startAfterDoc);
-            if (reqId !== this._reqId) return;
-            this.cargos = res.docs as Cargo[];
-            this.dataSource.data = this.cargos;
-            this.cursors[index] = res.lastDoc;
-            this.pageIndex = index;
-            this.hasMore = Array.isArray(res.docs) && res.docs.length === this.pageSize;
-            this.total = (this.pageIndex + (this.hasMore ? 2 : 1)) * this.pageSize;
-            if (this.paginator) {
-                this.paginator.pageIndex = this.pageIndex;
-                this.paginator.length = this.total;
+            // Para CLIENTE ou ADMIN com empresa selecionada: carregar cargos baseados nos funcionários da empresa
+            if (this.isCliente || this.hasAdminScope) {
+                const allCargos = this.isCliente
+                    ? await this.cargosService.listCargosForCliente()
+                    : await this.cargosService.listCargosForAdminScope();
+                if (reqId !== this._reqId) return;
+
+                // Filtrar por termo de busca se houver
+                let filtered = allCargos;
+                if (this.filterTerm && this.filterTerm.trim().length) {
+                    const term = this.filterTerm.trim().toLowerCase();
+                    filtered = allCargos.filter(c =>
+                        c.name.toLowerCase().includes(term) ||
+                        c.cbo.toLowerCase().includes(term)
+                    );
+                }
+
+                this.cargos = filtered;
+                this.dataSource.data = this.cargos;
+                this.total = this.cargos.length;
+                this.hasMore = false;
+                if (this.paginator) {
+                    this.paginator.pageIndex = 0;
+                    this.paginator.length = this.total;
+                }
+            } else {
+                // Comportamento original para ADMIN sem empresa selecionada (visão geral)
+                const startAfterDoc = index > 0 ? this.cursors[index - 1] : undefined;
+                const res: any = await this.cargosService.listCargosPaged(this.filterTerm, this.pageSize, startAfterDoc);
+                if (reqId !== this._reqId) return;
+                this.cargos = res.docs as Cargo[];
+                this.dataSource.data = this.cargos;
+                this.cursors[index] = res.lastDoc;
+                this.pageIndex = index;
+                this.hasMore = Array.isArray(res.docs) && res.docs.length === this.pageSize;
+                this.total = (this.pageIndex + (this.hasMore ? 2 : 1)) * this.pageSize;
+                if (this.paginator) {
+                    this.paginator.pageIndex = this.pageIndex;
+                    this.paginator.length = this.total;
+                }
             }
         } finally {
             if (reqId === this._reqId) {
@@ -166,6 +209,16 @@ export class CargosListComponent implements OnInit, OnDestroy {
             } catch (e: any) {
                 this.snack.open(e?.message ?? 'Erro ao atualizar cargo', 'Fechar', {duration: 4000});
             }
+        });
+    }
+
+    /** Visualizar cargo em modo somente leitura (para CLIENTE) */
+    viewCargo(c: Cargo) {
+        this.dialog.open(CargoDialogComponent, {
+            width: '600px',
+            data: { ...c, readOnly: true },
+            disableClose: false,
+            hasBackdrop: true
         });
     }
 

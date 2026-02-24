@@ -1,5 +1,6 @@
 import { Injectable } from '@angular/core';
 import { CargosRepository } from '../repositories/cargos.repository';
+import { EmployeesRepository } from '../repositories/employees.repository';
 import { Cargo } from '../models/cargo.model';
 import { AuditUser } from '../models/company.model';
 import { SessionService } from '../../../core/services/session.service';
@@ -9,11 +10,71 @@ function makeId(prefix = '') { return `${prefix}${Date.now().toString(36)}${Math
 
 @Injectable({ providedIn: 'root' })
 export class CargosService {
-  constructor(private readonly repo: CargosRepository, private readonly session: SessionService, private readonly usersRepo: UsersRepository) {}
+  constructor(
+    private readonly repo: CargosRepository,
+    private readonly session: SessionService,
+    private readonly usersRepo: UsersRepository,
+    private readonly employeesRepo: EmployeesRepository
+  ) {}
 
   private getUid(): string {
     const u = (this.session as any).user?.();
     return u?.id ?? '';
+  }
+
+  isAdmin(): boolean {
+    return this.session.hasRole(['ADMIN'] as any);
+  }
+
+  private getLoggedCompanyId(): string {
+    const u = (this.session as any).user?.();
+    return u?.companyId ?? '';
+  }
+
+  /** Verifica se o usuário é CLIENTE (somente visualização de cargos) */
+  isCliente(): boolean {
+    return this.session.hasRole(['CLIENTE'] as any);
+  }
+
+  /** Retorna o companyId selecionado pelo ADMIN (ou null se visão geral) */
+  getAdminScopeCompanyId(): string | null {
+    return this.session.adminScopeCompanyId();
+  }
+
+  /** Verifica se ADMIN tem uma empresa selecionada (não está na visão geral) */
+  hasAdminScopeCompany(): boolean {
+    return this.isAdmin() && !!this.session.adminScopeCompanyId();
+  }
+
+  /** Lista cargos para CLIENTE - baseado nos funcionários da empresa */
+  async listCargosForCliente(): Promise<Cargo[]> {
+    const companyId = this.getLoggedCompanyId();
+    return this.listCargosByCompanyEmployees(companyId);
+  }
+
+  /** Lista cargos para ADMIN com empresa selecionada - baseado nos funcionários */
+  async listCargosForAdminScope(): Promise<Cargo[]> {
+    const companyId = this.session.adminScopeCompanyId();
+    if (!companyId) return [];
+    return this.listCargosByCompanyEmployees(companyId);
+  }
+
+  /** Método interno para listar cargos baseado nos funcionários de uma empresa */
+  private async listCargosByCompanyEmployees(companyId: string | null): Promise<Cargo[]> {
+    if (!companyId) return [];
+
+    // 1. Buscar todos os funcionários da empresa
+    const employees = await this.employeesRepo.listByCompanyId(companyId);
+
+    // 2. Extrair CBOs únicos dos funcionários
+    const uniqueCbos = [...new Set(employees.map(e => e.cargoCbo).filter(cbo => !!cbo))];
+
+    if (uniqueCbos.length === 0) return [];
+
+    // 3. Buscar cargos correspondentes aos CBOs
+    const cargos = await this.repo.listByCboList(uniqueCbos);
+
+    return cargos;
   }
 
   async createCargo(input: Partial<Cargo>): Promise<string> {

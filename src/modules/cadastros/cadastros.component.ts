@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, inject, AfterViewInit, ViewChild } from '@angular/core';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, inject, AfterViewInit, ViewChild, ComponentRef, ViewContainerRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatCardModule } from '@angular/material/card';
 import { MatTabsModule, MatTabGroup } from '@angular/material/tabs';
@@ -25,38 +25,37 @@ import { SessionService } from '../../core/services/session.service';
     EquipmentsListComponent,
   ],
   template: `
-    <mat-card class="card-full">
-      <mat-tab-group mat-stretch-tabs (selectedIndexChange)="onTabChange($event)">
-        <mat-tab *ngIf="canSee('EMPRESAS')" label="Empreendimentos (PF/PJ)">
-          <app-companies-list></app-companies-list>
-        </mat-tab>
-        <mat-tab *ngIf="canSee('UNIDADES')" label="Unidades">
-          <app-units-list></app-units-list>
-        </mat-tab>
-        <mat-tab *ngIf="canSee('FUNCIONARIOS')" label="Funcionários">
-          <ng-container *ngIf="employeesCompPromise | async as employeesComp">
-            <ng-container *ngComponentOutlet="employeesComp"></ng-container>
-          </ng-container>
-        </mat-tab>
-        <mat-tab *ngIf="canSee('CARGOS')" label="Cargos">
-          <app-cargos-list></app-cargos-list>
-        </mat-tab>
-        <mat-tab *ngIf="canSee('SETORES')" label="Setores">
-          <app-sectors-list></app-sectors-list>
-        </mat-tab>
-        <mat-tab *ngIf="canSee('RISCOS')" label="Riscos">
-          <app-risks-list></app-risks-list>
-        </mat-tab>
-        <mat-tab *ngIf="canSee('EPIS')" label="EPIs / EPCs">
-          <app-equipments-list></app-equipments-list>
-        </mat-tab>
-      </mat-tab-group>
-    </mat-card>
+      <mat-card class="card-full">
+          <mat-tab-group mat-stretch-tabs (selectedIndexChange)="onTabChange($event)">
+              <mat-tab *ngIf="canSee('EMPRESAS')" label="Empreendimentos (PF/PJ)">
+                  <app-companies-list></app-companies-list>
+              </mat-tab>
+              <mat-tab *ngIf="canSee('UNIDADES')" label="Unidades">
+                  <app-units-list></app-units-list>
+              </mat-tab>
+              <mat-tab *ngIf="canSee('SETORES')" label="Setores">
+                  <app-sectors-list></app-sectors-list>
+              </mat-tab>
+              <mat-tab *ngIf="canSee('CARGOS')" label="Cargos">
+                  <app-cargos-list></app-cargos-list>
+              </mat-tab>
+              <mat-tab *ngIf="canSee('FUNCIONARIOS')" label="Funcionários">
+                  <ng-template #employeesContainer></ng-template>
+              </mat-tab>
+              <mat-tab *ngIf="canSee('RISCOS')" label="Riscos">
+                  <app-risks-list></app-risks-list>
+              </mat-tab>
+              <mat-tab *ngIf="canSee('EPIS')" label="EPIs / EPCs">
+                  <app-equipments-list></app-equipments-list>
+              </mat-tab>
+          </mat-tab-group>
+      </mat-card>
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class CadastrosComponent implements AfterViewInit {
   private readonly session = inject(SessionService);
+  private readonly cdr = inject(ChangeDetectorRef);
 
   @ViewChild(MatTabGroup) tabGroup!: MatTabGroup;
   @ViewChild(CompaniesListComponent) companiesList?: CompaniesListComponent;
@@ -65,8 +64,10 @@ export class CadastrosComponent implements AfterViewInit {
   @ViewChild(SectorsListComponent) sectorsList?: SectorsListComponent;
   @ViewChild(RisksListComponent) risksList?: RisksListComponent;
   @ViewChild(EquipmentsListComponent) equipmentsList?: EquipmentsListComponent;
+  @ViewChild('employeesContainer', { read: ViewContainerRef }) employeesContainer?: ViewContainerRef;
 
-  employeesCompPromise: Promise<any> | null = null;
+  private employeesComponentRef: ComponentRef<any> | null = null;
+  private employeesLoaded = false;
 
   canSee(tab: 'EMPRESAS' | 'UNIDADES' | 'FUNCIONARIOS' | 'CARGOS' | 'SETORES' | 'RISCOS' | 'EPIS') {
     const isAdmin = this.session.hasRole(['ADMIN'] as any);
@@ -75,9 +76,9 @@ export class CadastrosComponent implements AfterViewInit {
     // ADMIN: acesso total
     if (isAdmin) return true;
 
-    // CLIENTE: acesso somente dentro de Cadastros (Empresas, Unidades, Setores, Funcionários)
+    // CLIENTE: acesso somente dentro de Cadastros (Empresas, Unidades, Setores, Funcionários, Cargos)
     if (isCliente) {
-      return tab === 'EMPRESAS' || tab === 'UNIDADES' || tab === 'SETORES' || tab === 'FUNCIONARIOS';
+      return tab === 'EMPRESAS' || tab === 'UNIDADES' || tab === 'SETORES' || tab === 'FUNCIONARIOS' || tab === 'CARGOS';
     }
 
     // Outros perfis (ex.: CONSULTOR) ficam sem acesso por este novo requisito
@@ -85,12 +86,12 @@ export class CadastrosComponent implements AfterViewInit {
   }
 
   ngAfterViewInit(): void {
-    const tabsOrder: Array<'EMPRESAS' | 'UNIDADES' | 'FUNCIONARIOS' | 'CARGOS' | 'SETORES' | 'RISCOS' | 'EPIS'> = [
+    const tabsOrder: Array<'EMPRESAS' | 'UNIDADES' | 'SETORES' | 'CARGOS' | 'FUNCIONARIOS' | 'RISCOS' | 'EPIS'> = [
       'EMPRESAS',
       'UNIDADES',
-      'FUNCIONARIOS',
-      'CARGOS',
       'SETORES',
+      'CARGOS',
+      'FUNCIONARIOS',
       'RISCOS',
       'EPIS',
     ];
@@ -101,11 +102,6 @@ export class CadastrosComponent implements AfterViewInit {
     // Set the selected tab index and trigger load for that tab
     if (this.tabGroup) {
       this.tabGroup.selectedIndex = defaultIndex;
-      // pre-load employees component if default is FUNCIONARIOS
-      const visibleTabsOrder = visibleTabs;
-      if (visibleTabsOrder[defaultIndex] === 'FUNCIONARIOS') {
-        this.employeesCompPromise = import('./funcionarios/employees-list.component').then(m => m.EmployeesListComponent);
-      }
       // ensure initial tab's data is loaded
       this.onTabChange(defaultIndex);
     }
@@ -113,8 +109,8 @@ export class CadastrosComponent implements AfterViewInit {
 
   onTabChange(index: number): void {
     // Determine which visible tab is at the provided index and call its load method
-    const tabsOrder: Array<'EMPRESAS' | 'UNIDADES' | 'FUNCIONARIOS' | 'CARGOS' | 'SETORES' | 'RISCOS' | 'EPIS'> = [
-      'EMPRESAS', 'UNIDADES', 'FUNCIONARIOS', 'CARGOS', 'SETORES', 'RISCOS', 'EPIS'
+    const tabsOrder: Array<'EMPRESAS' | 'UNIDADES' | 'SETORES' | 'CARGOS' | 'FUNCIONARIOS' | 'RISCOS' | 'EPIS'> = [
+      'EMPRESAS', 'UNIDADES', 'SETORES', 'CARGOS', 'FUNCIONARIOS', 'RISCOS', 'EPIS'
     ];
     const visibleTabs = tabsOrder.filter(t => this.canSee(t));
     const tab = visibleTabs[index];
@@ -133,9 +129,30 @@ export class CadastrosComponent implements AfterViewInit {
     } else if (tab === 'EPIS') {
       this.equipmentsList?.loadPage(0, true);
     } else if (tab === 'FUNCIONARIOS') {
-      // dynamically import the employees component module and set promise so template can render
-      this.employeesCompPromise = import('./funcionarios/employees-list.component').then(m => m.EmployeesListComponent);
+      this.loadEmployeesComponent();
     }
     // other tabs are placeholders; no action required
+  }
+
+  private async loadEmployeesComponent(): Promise<void> {
+    // Pequeno delay para garantir que o container do tab esteja renderizado
+    await new Promise(resolve => setTimeout(resolve, 50));
+
+    if (!this.employeesContainer) {
+      console.warn('employeesContainer não disponível');
+      return;
+    }
+
+    if (!this.employeesLoaded) {
+      // Carregar o componente dinamicamente
+      const { EmployeesListComponent } = await import('./funcionarios/employees-list.component');
+      this.employeesContainer.clear();
+      this.employeesComponentRef = this.employeesContainer.createComponent(EmployeesListComponent);
+      this.employeesLoaded = true;
+      this.cdr.markForCheck();
+    } else if (this.employeesComponentRef) {
+      // Se já carregado, recarregar os dados
+      this.employeesComponentRef.instance.load(true);
+    }
   }
 }

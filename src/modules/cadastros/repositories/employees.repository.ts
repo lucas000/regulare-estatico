@@ -71,4 +71,14 @@ export class EmployeesRepository extends BaseFirestoreService<Employee> {
     const sn = await getDocs(qy as any);
     return sn.docs.map(d => d.data() as Employee);
   }
+
+  /** Lista todos os funcionários de uma empresa (para extrair CBOs únicos) */
+  async listByCompanyId(companyId: string, max = 1000): Promise<Employee[]> {
+    if (!companyId) return [];
+    const col = this.colRef();
+    const constraints: any[] = [where('companyId', '==', companyId), limit(max)];
+    const qy = query(col, ...constraints);
+    const sn = await getDocs(qy as any);
+    return sn.docs.map(d => d.data() as Employee);
+  }
 }

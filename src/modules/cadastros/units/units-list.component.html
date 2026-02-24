@@ -51,8 +51,17 @@
     <ng-container matColumnDef="acoes">
       <th mat-header-cell *matHeaderCellDef> Ações </th>
       <td mat-cell *matCellDef="let element">
-          <button mat-icon-button (click)="toggleActive(element)"><mat-icon>{{element.status==='active'?'toggle_on':'toggle_off'}}</mat-icon></button>
-          <button mat-icon-button (click)="editUnit(element)"><mat-icon>edit</mat-icon></button>
+        <div class="actions-container">
+          <button mat-icon-button (click)="toggleActive(element)" matTooltip="Ativar/Inativar">
+            <mat-icon>{{element.status==='active'?'toggle_on':'toggle_off'}}</mat-icon>
+          </button>
+          <button mat-icon-button (click)="editUnit(element)" matTooltip="Editar">
+            <mat-icon>edit</mat-icon>
+          </button>
+          <button mat-icon-button (click)="duplicateUnit(element)" matTooltip="Duplicar">
+            <mat-icon>content_copy</mat-icon>
+          </button>
+        </div>
       </td>
     </ng-container>
 

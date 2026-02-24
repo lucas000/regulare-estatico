@@ -81,4 +81,25 @@ export class CargosRepository extends BaseFirestoreService<Cargo> {
     const sn = await getDocs(q as any);
     return sn.docs.map(d => d.data() as Cargo);
   }
+
+  /** Lista cargos cujo CBO está na lista fornecida */
+  async listByCboList(cbos: string[]): Promise<Cargo[]> {
+    if (!cbos || cbos.length === 0) return [];
+
+    // Firestore 'in' operator supports up to 30 values per query
+    const results: Cargo[] = [];
+    const chunks: string[][] = [];
+
+    for (let i = 0; i < cbos.length; i += 30) {
+      chunks.push(cbos.slice(i, i + 30));
+    }
+
+    for (const chunk of chunks) {
+      const q = query(this.colRef(), where('cbo', 'in', chunk));
+      const sn = await getDocs(q as any);
+      results.push(...sn.docs.map(d => d.data() as Cargo));
+    }
+
+    return results;
+  }
 }

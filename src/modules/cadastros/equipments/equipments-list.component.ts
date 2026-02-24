@@ -171,7 +171,7 @@ export class EquipmentsListComponent implements OnInit, OnDestroy {
   }
 
   newEquipment() {
-    const ref = this.dialog.open(EquipmentDialogComponent, { width: '600px', disableClose: true, hasBackdrop: true });
+    const ref = this.dialog.open(EquipmentDialogComponent, { width: '650px', disableClose: true, hasBackdrop: true });
     ref.afterClosed().subscribe(async (res: any) => {
       if (!res) return;
       try {

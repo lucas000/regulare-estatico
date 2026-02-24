@@ -26,7 +26,7 @@ export class SidebarComponent {
 
   private readonly menu: readonly MenuItem[] = [
     { label: 'Dashboard', icon: 'dashboard', path: '/app/dashboard' },
-    { label: 'Licenças', icon: 'assignment', path: '/app/licencas' },
+    { label: 'Obrigação Legal Periódica', icon: 'assignment', path: '/app/licencas' },
     { label: 'Condicionantes', icon: 'rule', path: '/app/condicionantes' },
     { label: 'EPIs', icon: 'health_and_safety', path: '/app/epis' },
     { label: 'Alertas', icon: 'notifications', path: '/app/alertas' },

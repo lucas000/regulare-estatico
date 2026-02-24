@@ -1,3 +1,11 @@
 :host { display: block; }
 .cadastros-full { width: 100%; }
 .toolbar { display: flex; justify-content: flex-end; margin-bottom: 8px; }
+
+.actions-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  align-items: center;
+}
+

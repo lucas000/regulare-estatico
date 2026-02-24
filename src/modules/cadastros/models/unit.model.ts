@@ -5,8 +5,12 @@ export type DocumentType = 'CNPJ' | 'CPF' | 'CAEPF' | 'CNO';
 
 export interface UnitAddress {
   street: string;
+  complement?: string;
+  zipCode?: string;
   city: string;
   state: string;
+  latitude?: string;
+  longitude?: string;
 }
 
 export interface Unit {
@@ -38,4 +42,6 @@ export interface Unit {
   /** Backward compatibility (old fields) */
   city?: string;
   state?: string;
+  latitude?: string;
+  longitude?: string;
 }

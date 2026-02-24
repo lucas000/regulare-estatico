@@ -5,7 +5,7 @@
 
   <div class="title-area">
     <mat-icon class="title-icon">chevron_right</mat-icon>
-    <span class="title-text" *ngIf="title$ | async as title">{{ title }}</span>
+    <span class="title-text" *ngIf="title$ | async as title">{{ title === 'Licencas' ? 'Obrigação Legal Periódica' : title }}</span>
   </div>
 
   <span class="spacer"></span>

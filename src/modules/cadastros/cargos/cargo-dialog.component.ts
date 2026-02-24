@@ -30,7 +30,7 @@ import { AuditHistoryDialogComponent, AuditHistoryData } from '../../../core/com
   ],
   template: `
     <div class="dialog-header">
-      <h2 mat-dialog-title>Cargo</h2>
+      <h2 mat-dialog-title>{{ readOnly ? 'Visualizar Cargo' : 'Cargo' }}</h2>
       <button 
         *ngIf="isEdit" 
         mat-icon-button 
@@ -43,19 +43,19 @@ import { AuditHistoryDialogComponent, AuditHistoryData } from '../../../core/com
     <mat-dialog-content [formGroup]="form">
       <mat-form-field appearance="fill" style="width:100%">
         <mat-label>Nome</mat-label>
-        <input matInput formControlName="name" />
+        <input matInput formControlName="name" [readonly]="readOnly" />
         <mat-error *ngIf="form.controls['name']?.invalid">Nome é obrigatório</mat-error>
       </mat-form-field>
 
       <mat-form-field appearance="fill" style="width:100%">
         <mat-label>CBO</mat-label>
-        <input matInput formControlName="cbo" />
+        <input matInput formControlName="cbo" [readonly]="readOnly" />
         <mat-error *ngIf="form.controls['cbo']?.invalid">CBO é obrigatório</mat-error>
       </mat-form-field>
 
       <mat-form-field appearance="fill" style="width:100%">
         <mat-label>GFIP</mat-label>
-        <mat-select formControlName="gfip">
+        <mat-select formControlName="gfip" [disabled]="readOnly">
           <mat-option [value]="">Em branco</mat-option>
           <mat-option value="00">00</mat-option>
           <mat-option value="01">01</mat-option>
@@ -71,19 +71,19 @@ import { AuditHistoryDialogComponent, AuditHistoryData } from '../../../core/com
 
       <mat-form-field appearance="fill" style="width:100%">
         <mat-label>Descrição</mat-label>
-        <textarea matInput formControlName="description"></textarea>
+        <textarea matInput formControlName="description" [readonly]="readOnly"></textarea>
       </mat-form-field>
 
       <mat-form-field appearance="fill" style="width:100%">
         <mat-label>Tarefa Prescrita</mat-label>
-        <textarea matInput formControlName="notes"></textarea>
+        <textarea matInput formControlName="notes" [readonly]="readOnly"></textarea>
       </mat-form-field>
 
       <!-- Seção: Riscos Vinculados -->
       <div class="risks-section">
         <h3 class="section-title">Riscos Vinculados</h3>
         
-        <mat-form-field appearance="fill" style="width:100%">
+        <mat-form-field appearance="fill" style="width:100%" *ngIf="!readOnly">
           <mat-label>Selecionar riscos</mat-label>
           <mat-select multiple [formControl]="selectedRisksCtrl" (selectionChange)="onRisksSelectionChange()">
             <mat-option *ngIf="risksLoading" disabled>Carregando riscos...</mat-option>
@@ -105,7 +105,7 @@ import { AuditHistoryDialogComponent, AuditHistoryData } from '../../../core/com
             [matTooltip]="risk.description || 'Sem descrição'"
           >
             {{ risk.name }} - {{ getRiskGroupLabel(risk.riskGroup) }}
-            <button mat-icon-button class="remove-btn" (click)="removeRisk(risk.id)" aria-label="Remover risco">
+            <button *ngIf="!readOnly" mat-icon-button class="remove-btn" (click)="removeRisk(risk.id)" aria-label="Remover risco">
               <mat-icon>close</mat-icon>
             </button>
           </span>
@@ -117,8 +117,8 @@ import { AuditHistoryDialogComponent, AuditHistoryData } from '../../../core/com
 
     </mat-dialog-content>
     <mat-dialog-actions align="end">
-      <button mat-button (click)="cancel()">Cancelar</button>
-      <button mat-flat-button color="primary" (click)="save()">Salvar</button>
+      <button mat-button (click)="cancel()">{{ readOnly ? 'Fechar' : 'Cancelar' }}</button>
+      <button *ngIf="!readOnly" mat-flat-button color="primary" (click)="save()">Salvar</button>
     </mat-dialog-actions>
   `,
   styles: [`
@@ -204,6 +204,7 @@ import { AuditHistoryDialogComponent, AuditHistoryData } from '../../../core/com
 export class CargoDialogComponent implements OnInit {
   form!: FormGroup;
   isEdit = false;
+  readOnly = false;
   private readonly data = inject(MAT_DIALOG_DATA);
   private readonly risksRepo = inject(RisksRepository);
   private readonly cd = inject(ChangeDetectorRef);
@@ -252,6 +253,7 @@ export class CargoDialogComponent implements OnInit {
     if (this.data) {
       this.form.patchValue(this.data as any);
       this.isEdit = !!this.data.id;
+      this.readOnly = !!(this.data as any).readOnly;
       // Carregar riskIds existentes
       if ((this.data as any).riskIds && Array.isArray((this.data as any).riskIds)) {
         this.selectedRiskIds = [...(this.data as any).riskIds];
@@ -289,7 +291,7 @@ export class CargoDialogComponent implements OnInit {
   }
 
   getRiskGroupLabel(group: string): string {
-    return this.riskGroupLabels[group] || group;
+    return this.riskGroupLabels[group].toUpperCase() || group.toUpperCase();
   }
 
   onRisksSelectionChange() {

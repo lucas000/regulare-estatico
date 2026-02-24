@@ -111,6 +111,11 @@ export class LicenseDialogComponent implements OnInit, OnDestroy {
     return this.form?.get('documentGroup')?.value === 'Programas de SST';
   }
 
+  // Verifica se o tipo de documento é "Cadastro Ambiental Rural (CAR)"
+  get isCAR(): boolean {
+    return this.form?.get('documentType')?.value === 'Cadastro Ambiental Rural (CAR)';
+  }
+
   private initForm(): void {
     this.form = this.fb.group({
       companyId: ['', Validators.required],
@@ -125,6 +130,8 @@ export class LicenseDialogComponent implements OnInit, OnDestroy {
       expirationDate: ['', [Validators.required, Validators.pattern(/^\d{2}\/\d{2}\/\d{4}$/)]],
       pdfUrl: [''],
       notes: [''],
+      // Campo de matrículas rurais (obrigatório para CAR)
+      ruralRegistrations: [''],
       // Campos do Responsável Técnico (obrigatórios para Programas de SST)
       technicalResponsibleName: [''],
       technicalResponsibleCpf: [''],
@@ -151,6 +158,14 @@ export class LicenseDialogComponent implements OnInit, OnDestroy {
       }) as Subscription
     );
 
+    // Listener para atualizar validação do campo de matrículas rurais quando o tipo de documento muda
+    this.subs.add(
+      this.form.get('documentType')?.valueChanges.subscribe((docType: string) => {
+        this.updateRuralRegistrationsValidator(docType === 'Cadastro Ambiental Rural (CAR)');
+        this.cd.markForCheck();
+      }) as Subscription
+    );
+
     if (this.data) {
       this.isEdit = !!this.data.isEdit;
       this.readOnly = !!this.data.readOnly;
@@ -168,6 +183,11 @@ export class LicenseDialogComponent implements OnInit, OnDestroy {
           }
         }
 
+        // Se é CAR, ativa a validação do campo de matrículas rurais
+        if (this.data.documentType === 'Cadastro Ambiental Rural (CAR)') {
+          this.updateRuralRegistrationsValidator(true);
+        }
+
         this.form.patchValue({
           companyId: this.data.companyId,
           unitId: this.data.unitId,
@@ -181,6 +201,8 @@ export class LicenseDialogComponent implements OnInit, OnDestroy {
           expirationDate: this.data.expirationDate,
           pdfUrl: this.data.pdfUrl,
           notes: this.data.notes,
+          // Campo de matrículas rurais
+          ruralRegistrations: this.data.ruralRegistrations || '',
           // Campos do Responsável Técnico
           technicalResponsibleName: this.data.technicalResponsibleName || '',
           technicalResponsibleCpf: this.data.technicalResponsibleCpf || '',
@@ -298,6 +320,20 @@ export class LicenseDialogComponent implements OnInit, OnDestroy {
         control.updateValueAndValidity();
       }
     });
+  }
+
+  // Atualiza validador do campo de matrículas rurais (obrigatório para CAR)
+  private updateRuralRegistrationsValidator(isRequired: boolean): void {
+    const control = this.form.get('ruralRegistrations');
+    if (control) {
+      if (isRequired) {
+        control.setValidators([Validators.required]);
+      } else {
+        control.clearValidators();
+        control.setValue(''); // Limpa o valor quando não é CAR
+      }
+      control.updateValueAndValidity();
+    }
   }
 
   onPdfSelected(event: Event): void {

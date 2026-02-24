@@ -40,7 +40,7 @@
     </mat-form-field>
 
     <mat-form-field appearance="fill">
-      <mat-label>CAEPF (PF Rural)</mat-label>
+      <mat-label>CAEPF</mat-label>
       <input matInput formControlName="caepf" />
       <mat-error *ngIf="form.get('caepf')?.touched && form.get('caepf')?.invalid">Obrigatório para PF</mat-error>
     </mat-form-field>
@@ -85,6 +85,16 @@
     </mat-form-field>
 
     <mat-form-field appearance="fill">
+      <mat-label>Complemento</mat-label>
+      <input matInput formControlName="addressComplement" />
+    </mat-form-field>
+
+    <mat-form-field appearance="fill">
+      <mat-label>CEP</mat-label>
+      <input matInput formControlName="addressZipCode" placeholder="00000-000" />
+    </mat-form-field>
+
+    <mat-form-field appearance="fill">
       <mat-label>UF</mat-label>
       <mat-select formControlName="addressUf">
         <mat-option *ngFor="let e of estados" [value]="e.sigla">{{ e.sigla }} - {{ e.nome }}</mat-option>
@@ -100,6 +110,23 @@
       </mat-select>
       <mat-error *ngIf="form.get('addressCity')?.touched && form.get('addressCity')?.invalid">Obrigatório</mat-error>
     </mat-form-field>
+
+    <mat-form-field appearance="fill">
+      <mat-label>Latitude</mat-label>
+      <input matInput formControlName="latitude" type="text" readonly />
+    </mat-form-field>
+
+    <mat-form-field appearance="fill">
+      <mat-label>Longitude</mat-label>
+      <input matInput formControlName="longitude" type="text" readonly />
+    </mat-form-field>
+
+    <div class="coords-btn-container">
+      <button mat-stroked-button color="primary" type="button" (click)="openMapCoordinates()">
+        <mat-icon>place</mat-icon>
+        Selecionar Coordenadas
+      </button>
+    </div>
   </div>
 
   <!-- Classificação -->

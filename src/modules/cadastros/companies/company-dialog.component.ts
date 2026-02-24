@@ -17,6 +17,7 @@ import {LocalidadesService, Estado, Municipio} from '../../../core/services/loca
 import {CompanyPersonType, CompanyType, CompanyCnae} from '../models/company.model';
 import {CnaeService, Cnae} from '../../../core/services/cnae.service';
 import {AuditHistoryDialogComponent, AuditHistoryData} from '../../../core/components/audit-history-dialog.component';
+import {MapCoordinatesDialogComponent, MapCoordinatesResult} from '../../../core/components/map-coordinates-dialog.component';
 
 function cnaeToCompanyCnae(c: Cnae | CompanyCnae | null | undefined): CompanyCnae {
     if (!c) return {id: '', descricao: '', observacoes: []};
@@ -120,8 +121,12 @@ export class CompanyDialogComponent implements OnInit, OnDestroy {
 
             // Endereço
             addressStreet: ['', [Validators.required]],
+            addressComplement: [''],
+            addressZipCode: [''],
             addressUf: ['', [Validators.required]],
             addressCity: ['', [Validators.required]],
+            latitude: [''],
+            longitude: [''],
 
             // Classificação
             companyType: ['Outro', [Validators.required]],
@@ -460,6 +465,29 @@ export class CompanyDialogComponent implements OnInit, OnDestroy {
             data: auditData,
             width: '400px',
             disableClose: false,
+        });
+    }
+
+    openMapCoordinates(): void {
+        const currentLat = this.form.get('latitude')?.value;
+        const currentLng = this.form.get('longitude')?.value;
+
+        const dialogRef = this.auditDialog.open(MapCoordinatesDialogComponent, {
+            data: {
+                latitude: currentLat ? parseFloat(currentLat) : undefined,
+                longitude: currentLng ? parseFloat(currentLng) : undefined,
+            },
+            width: '600px',
+            maxWidth: '95vw',
+            disableClose: true,
+        });
+
+        dialogRef.afterClosed().subscribe((result: MapCoordinatesResult | undefined) => {
+            if (result) {
+                this.form.get('latitude')?.setValue(result.latitude.toString());
+                this.form.get('longitude')?.setValue(result.longitude.toString());
+                this.cd.markForCheck();
+            }
         });
     }
 }

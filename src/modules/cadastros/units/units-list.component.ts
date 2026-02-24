@@ -15,11 +15,13 @@ import { debounceTime, distinctUntilChanged } from 'rxjs/operators';
 import { Subscription } from 'rxjs';
 import { MatPaginator, PageEvent, MatPaginatorModule } from '@angular/material/paginator';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { MatTooltipModule } from '@angular/material/tooltip';
+import { ConfirmDuplicateDialogComponent } from '../../../core/components/confirm-duplicate-dialog.component';
 
 @Component({
   selector: 'app-units-list',
   standalone: true,
-  imports: [CommonModule, MatTableModule, MatButtonModule, MatIconModule, MatDialogModule, MatFormFieldModule, MatInputModule, MatProgressBarModule, FormsModule, ReactiveFormsModule, MatPaginatorModule, MatSnackBarModule],
+  imports: [CommonModule, MatTableModule, MatButtonModule, MatIconModule, MatDialogModule, MatFormFieldModule, MatInputModule, MatProgressBarModule, FormsModule, ReactiveFormsModule, MatPaginatorModule, MatSnackBarModule, MatTooltipModule],
   templateUrl: './units-list.component.html',
   styleUrls: ['./units-list.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -176,5 +178,62 @@ export class UnitsListComponent implements OnInit, OnDestroy {
     const c = this.getCity(u);
     const s = this.getState(u);
     return [c, s].filter(Boolean).join(' / ');
+  }
+
+  duplicateUnit(u: Unit): void {
+    const ref = this.dialog.open(ConfirmDuplicateDialogComponent, {
+      width: '400px',
+      data: {
+        title: 'Confirmar Duplicação',
+        message: 'Tem certeza que deseja duplicar esta unidade?',
+        itemName: u.name
+      }
+    });
+
+    ref.afterClosed().subscribe(async (confirmed: boolean) => {
+      if (!confirmed) return;
+
+      // Cria cópia da unidade sem id, createdAt, createdBy, updatedAt, updatedBy
+      // Obtém latitude e longitude de address ou dos campos raiz (backward compatibility)
+      const lat = u.address?.latitude ?? u.latitude ?? '';
+      const lng = u.address?.longitude ?? u.longitude ?? '';
+
+      const duplicate: Partial<Unit> = {
+        companyId: u.companyId,
+        name: `Cópia ${u.name}`,
+        documentType: u.documentType,
+        documentNumber: u.documentNumber,
+        cnaeMain: u.cnaeMain,
+        cnaeSecondary: u.cnaeSecondary,
+        address: u.address ? {
+          street: u.address.street,
+          complement: u.address.complement,
+          zipCode: u.address.zipCode,
+          city: u.address.city,
+          state: u.address.state,
+          latitude: lat || undefined,
+          longitude: lng || undefined,
+        } : undefined,
+        workEnvironmentDescription: u.workEnvironmentDescription,
+        email: u.email,
+        phone: u.phone,
+        status: u.status,
+        notes: u.notes,
+        // Backward compatibility fields
+        city: u.city,
+        state: u.state,
+        latitude: lat || undefined,
+        longitude: lng || undefined,
+      };
+
+      try {
+        await this.unitsService.createUnit(duplicate);
+        this.snack.open('Unidade duplicada com sucesso', 'Fechar', { duration: 3000 });
+        this.loadPage(0, true);
+      } catch (error) {
+        this.snack.open('Erro ao duplicar unidade', 'Fechar', { duration: 3000 });
+        console.error('Erro ao duplicar unidade:', error);
+      }
+    });
   }
 }
