@@ -193,37 +193,53 @@ export class UnitsListComponent implements OnInit, OnDestroy {
     ref.afterClosed().subscribe(async (confirmed: boolean) => {
       if (!confirmed) return;
 
-      // Cria cópia da unidade sem id, createdAt, createdBy, updatedAt, updatedBy
-      // Obtém latitude e longitude de address ou dos campos raiz (backward compatibility)
-      const lat = u.address?.latitude ?? u.latitude ?? '';
-      const lng = u.address?.longitude ?? u.longitude ?? '';
+      // Normaliza endereço e coordenadas seguindo o mesmo padrão do UnitDialogComponent + legados
+      const street = (u as any).address?.street ?? (u as any).endereco?.street ?? (u as any).logradouro ?? (u as any).street ?? '';
+      const complement = (u as any).address?.complement ?? (u as any).endereco?.complement ?? (u as any).complemento ?? (u as any).complement ?? '';
+      const zipCode = (u as any).address?.zipCode ?? (u as any).endereco?.zipCode ?? (u as any).cep ?? (u as any).zipCode ?? '';
+      const city = (u as any).address?.city ?? (u as any).endereco?.city ?? (u as any).cidade ?? (u as any).city ?? '';
+      const state = (u as any).address?.state ?? (u as any).endereco?.state ?? (u as any).estado ?? (u as any).state ?? '';
 
-      const duplicate: Partial<Unit> = {
-        companyId: u.companyId,
+      const latRaw = (u as any).address?.latitude ?? (u as any).endereco?.latitude ?? (u as any).lat ?? (u as any).latitude ?? '';
+      const lngRaw = (u as any).address?.longitude ?? (u as any).endereco?.longitude ?? (u as any).lng ?? (u as any).long ?? (u as any).longitude ?? '';
+      const latitude = (latRaw !== null && latRaw !== undefined && String(latRaw).trim() !== '') ? String(latRaw) : null;
+      const longitude = (lngRaw !== null && lngRaw !== undefined && String(lngRaw).trim() !== '') ? String(lngRaw) : null;
+
+      const duplicate: any = {
+        companyId: (u as any).companyId,
         name: `Cópia ${u.name}`,
-        documentType: u.documentType,
-        documentNumber: u.documentNumber,
-        cnaeMain: u.cnaeMain,
-        cnaeSecondary: u.cnaeSecondary,
-        address: u.address ? {
-          street: u.address.street,
-          complement: u.address.complement,
-          zipCode: u.address.zipCode,
-          city: u.address.city,
-          state: u.address.state,
-          latitude: lat || undefined,
-          longitude: lng || undefined,
-        } : undefined,
-        workEnvironmentDescription: u.workEnvironmentDescription,
-        email: u.email,
-        phone: u.phone,
-        status: u.status,
-        notes: u.notes,
-        // Backward compatibility fields
-        city: u.city,
-        state: u.state,
-        latitude: lat || undefined,
-        longitude: lng || undefined,
+        documentType: (u as any).documentType ?? 'CNPJ',
+        documentNumber: (u as any).documentNumber ?? '',
+
+        // CNAEs conforme persistência do dialog
+        cnaeMain: (u as any).cnaeMain ?? null,
+        cnaeSecondary: Array.isArray((u as any).cnaeSecondary) ? (u as any).cnaeSecondary : [],
+
+        // Campos planos (compatibilidade)
+        street: street,
+        complement: complement || null,
+        zipCode: zipCode || null,
+        city: city,
+        state: state,
+        latitude: latitude,
+        longitude: longitude,
+
+        // Objeto address completo, como salvo pelo dialog
+        address: {
+          street: street,
+          complement: complement || null,
+          zipCode: zipCode || null,
+          city: city,
+          state: state,
+          latitude: latitude,
+          longitude: longitude,
+        },
+
+        workEnvironmentDescription: (u as any).workEnvironmentDescription ?? '',
+        email: (u as any).email ?? null,
+        phone: (u as any).phone ?? null,
+        status: (u as any).status ?? 'active',
+        notes: (u as any).notes ?? null,
       };
 
       try {

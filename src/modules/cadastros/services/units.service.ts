@@ -63,8 +63,15 @@ export class UnitsService {
     const now = new Date().toISOString();
     const id = `unit_${makeId()}`;
 
+    const street = input.address?.street ?? (input as any).street ?? '';
+    const complement = input.address?.complement ?? (input as any).complement ?? null;
+    const zipCode = input.address?.zipCode ?? (input as any).zipCode ?? null;
     const city = input.address?.city ?? (input as any).city ?? '';
     const state = input.address?.state ?? (input as any).state ?? '';
+    const latRaw = input.address?.latitude ?? (input as any).latitude ?? null;
+    const lngRaw = input.address?.longitude ?? (input as any).longitude ?? null;
+    const latitude = (latRaw !== null && latRaw !== undefined && String(latRaw).trim() !== '') ? String(latRaw) : null;
+    const longitude = (lngRaw !== null && lngRaw !== undefined && String(lngRaw).trim() !== '') ? String(lngRaw) : null;
 
     const email = (input as any).email;
     const phone = (input as any).phone;
@@ -82,9 +89,13 @@ export class UnitsService {
       cnaeSecondary: normalizeCnaeArray((input as any).cnaeSecondary),
 
       address: {
-        street: input.address?.street ?? (input as any).street ?? '',
+        street,
+        complement,
+        zipCode,
         city,
         state,
+        latitude,
+        longitude,
       },
 
       workEnvironmentDescription: input.workEnvironmentDescription ?? '',
@@ -102,6 +113,8 @@ export class UnitsService {
       // backward compatibility
       city,
       state,
+      latitude,
+      longitude,
     } as any;
 
     // Remove campos undefined (Firestore não aceita)
