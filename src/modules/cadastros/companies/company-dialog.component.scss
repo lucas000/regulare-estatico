@@ -92,6 +92,21 @@
     color: #b91c1c;
   }
 
+  /* Cargos da Empresa */
+  .status-badge {
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 11px;
+    text-transform: uppercase;
+    background: #eee;
+    color: #666;
+
+    &.ativo {
+      background: #e8f5e9;
+      color: #2e7d32;
+    }
+  }
+
   /* Botão de seleção de coordenadas */
   .coords-btn-container {
     display: flex;

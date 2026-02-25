@@ -23,7 +23,15 @@ import {MatSnackBar, MatSnackBarModule} from '@angular/material/snack-bar';
 import {Cargo} from '../models/cargo.model';
 import {CargosService} from '../services/cargos.service';
 import {CboImportService} from '../services/cbo-import.service';
-import {CargoDialogComponent} from './cargo-dialog.component';
+import {CompanyCargosService} from '../services/company-cargos.service';
+import {CompanyCargo} from '../models/cargo.model';
+import {SessionService} from '../../../core/services/session.service';
+import { CargoDialogComponent } from './cargo-dialog.component';
+import {Risk} from '../models/risk.model';
+import {RisksService} from '../services/risks.service';
+import {CompanyRisksService} from '../services/company-risks.service';
+import {CompanyRisk} from '../models/company-risk.model';
+import {RiskDialogComponent} from '../risks/risk-dialog.component';
 
 @Component({
     selector: 'app-cargos-list',
@@ -36,13 +44,23 @@ import {CargoDialogComponent} from './cargo-dialog.component';
 export class CargosListComponent implements OnInit, OnDestroy {
     private readonly cargosService = inject(CargosService);
     private readonly cboImport = inject(CboImportService);
+    private readonly companyCargosService = inject(CompanyCargosService);
     private readonly dialog = inject(MatDialog);
     private readonly cd = inject(ChangeDetectorRef);
     private readonly snack = inject(MatSnackBar);
+    private readonly sessionService = inject(SessionService);
+    private readonly risksService = inject(RisksService);
+    private readonly companyRisksService = inject(CompanyRisksService);
+    private readonly riskDialog = inject(MatDialog);
 
     columns = ['name', 'cbo', 'status', 'acoes'];
-    cargos: Cargo[] = [];
-    dataSource: MatTableDataSource<Cargo>;
+    cargos: any[] = [];
+    dataSource: MatTableDataSource<any>;
+
+    // risks state
+    riskColumns = ['name', 'riskGroup', 'status', 'acoesRisk'];
+    risks: any[] = [];
+    riskDataSource = new MatTableDataSource<any>([]);
 
     pageSize = 30;
     pageIndex = 0;
@@ -54,6 +72,7 @@ export class CargosListComponent implements OnInit, OnDestroy {
 
     loading = false;
     importing = false;
+    loadingRisks = false;
 
     // Controle de perfil
     isCliente = false;
@@ -64,7 +83,7 @@ export class CargosListComponent implements OnInit, OnDestroy {
     private subs: Subscription | null = null;
 
     constructor() {
-        this.dataSource = new MatTableDataSource<Cargo>([]);
+        this.dataSource = new MatTableDataSource<any>([]);
     }
 
     @ViewChild(MatPaginator) paginator?: MatPaginator;
@@ -74,11 +93,11 @@ export class CargosListComponent implements OnInit, OnDestroy {
         this.isCliente = this.cargosService.isCliente();
         this.isAdmin = this.cargosService.isAdmin();
         this.hasAdminScope = this.cargosService.hasAdminScopeCompany();
+        // adminGlobalView = ADMIN && no company selected
+        // will compute on demand via getAdminScopeCompanyId()
 
-        // Para CLIENTE ou ADMIN com empresa selecionada, ocultar coluna de ações
-        if (this.isCliente || this.hasAdminScope) {
-            this.columns = ['name', 'cbo', 'status'];
-        }
+        // For company-scoped views (CLIENTE or ADMIN with company selected) we still show actions
+        // The actions will operate on company_cargos collection
 
         this.subs = this.searchControl.valueChanges.pipe(debounceTime(300), distinctUntilChanged()).subscribe((v: string | null) => {
             this.filterTerm = v ?? '';
@@ -100,33 +119,11 @@ export class CargosListComponent implements OnInit, OnDestroy {
         this.loading = true;
         const reqId = ++this._reqId;
         try {
-            // Para CLIENTE ou ADMIN com empresa selecionada: carregar cargos baseados nos funcionários da empresa
-            if (this.isCliente || this.hasAdminScope) {
-                const allCargos = this.isCliente
-                    ? await this.cargosService.listCargosForCliente()
-                    : await this.cargosService.listCargosForAdminScope();
-                if (reqId !== this._reqId) return;
+            // Determine admin global view: admin && no company selected => list all cargos paged
+            const adminScopeCompanyId = this.cargosService.getAdminScopeCompanyId();
+            const isAdminGlobalView = this.isAdmin && !adminScopeCompanyId;
 
-                // Filtrar por termo de busca se houver
-                let filtered = allCargos;
-                if (this.filterTerm && this.filterTerm.trim().length) {
-                    const term = this.filterTerm.trim().toLowerCase();
-                    filtered = allCargos.filter(c =>
-                        c.name.toLowerCase().includes(term) ||
-                        c.cbo.toLowerCase().includes(term)
-                    );
-                }
-
-                this.cargos = filtered;
-                this.dataSource.data = this.cargos;
-                this.total = this.cargos.length;
-                this.hasMore = false;
-                if (this.paginator) {
-                    this.paginator.pageIndex = 0;
-                    this.paginator.length = this.total;
-                }
-            } else {
-                // Comportamento original para ADMIN sem empresa selecionada (visão geral)
+            if (isAdminGlobalView) {
                 const startAfterDoc = index > 0 ? this.cursors[index - 1] : undefined;
                 const res: any = await this.cargosService.listCargosPaged(this.filterTerm, this.pageSize, startAfterDoc);
                 if (reqId !== this._reqId) return;
@@ -140,13 +137,75 @@ export class CargosListComponent implements OnInit, OnDestroy {
                     this.paginator.pageIndex = this.pageIndex;
                     this.paginator.length = this.total;
                 }
+            } else {
+                // company-scoped: load cargos from company_cargos collection (CLIENTE or ADMIN with selected company)
+                const companyId = this.isCliente ? (this.sessionService.user()?.companyId ?? '') : adminScopeCompanyId ?? '';
+                const list = companyId ? await this.companyCargosService.listByCompany(companyId) : [];
+                if (reqId !== this._reqId) return;
+
+                let filtered = list;
+                if (this.filterTerm && this.filterTerm.trim().length) {
+                    const term = this.filterTerm.trim().toLowerCase();
+                    filtered = list.filter((c: CompanyCargo) => (c.name || '').toLowerCase().includes(term) || (String(c.cbo || '')).toLowerCase().includes(term));
+                }
+
+                this.cargos = filtered;
+                this.dataSource.data = this.cargos;
+                this.total = this.cargos.length;
+                this.hasMore = false;
+                if (this.paginator) {
+                    this.paginator.pageIndex = 0;
+                    this.paginator.length = this.total;
+                }
             }
         } finally {
             if (reqId === this._reqId) {
                 this.loading = false;
                 this.cd.markForCheck();
             }
+            // always refresh risks after cargos load (scope may have changed)
+            await this.loadRisks();
         }
+    }
+
+    async loadRisks() {
+        this.loadingRisks = true;
+        this.cd.markForCheck();
+        try {
+            const adminScopeCompanyId = this.cargosService.getAdminScopeCompanyId();
+            const isAdminGlobalView = this.isAdmin && !adminScopeCompanyId;
+
+            if (isAdminGlobalView) {
+                // show generic risks (first page)
+                const res: any = await this.risksService.listRisksPaged(this.filterTerm, 30);
+                this.risks = (res.docs as Risk[]) ?? [];
+            } else {
+                const companyId = this.isCliente ? (this.sessionService.user()?.companyId ?? '') : adminScopeCompanyId ?? '';
+                if (companyId) {
+                    const list = await this.companyRisksService.listByCompany(companyId);
+                    // optional client-side filter
+                    if (this.filterTerm && this.filterTerm.trim().length) {
+                        const term = this.filterTerm.trim().toLowerCase();
+                        this.risks = list.filter((r: CompanyRisk) => (r.name || '').toLowerCase().includes(term));
+                    } else this.risks = list;
+                } else {
+                    this.risks = [];
+                }
+            }
+
+            this.riskDataSource.data = this.risks;
+        } catch (e) {
+            console.error('Erro ao carregar riscos:', e);
+            this.risks = [];
+            this.riskDataSource.data = [];
+        } finally {
+            this.loadingRisks = false;
+            this.cd.markForCheck();
+        }
+    }
+
+    viewRisk(r: any) {
+        this.riskDialog.open(RiskDialogComponent, { width: '700px', data: { ...r, readOnly: true }, disableClose: false, hasBackdrop: true });
     }
 
     async load(reset = false) {
@@ -189,9 +248,21 @@ export class CargosListComponent implements OnInit, OnDestroy {
         ref.afterClosed().subscribe(async (res: any) => {
             if (!res) return;
             try {
-                await this.cargosService.createCargo(res);
-                this.snack.open('Cargo criado com sucesso', 'Fechar', {duration: 3000});
-                this.loadPage(0, true);
+                const adminScopeCompanyId = this.cargosService.getAdminScopeCompanyId();
+                const isAdminGlobalView = this.isAdmin && !adminScopeCompanyId;
+
+                if (!isAdminGlobalView) {
+                    const companyId = this.isCliente ? (this.sessionService.user()?.companyId ?? '') : adminScopeCompanyId ?? '';
+                    if (!companyId) throw new Error('Empresa não definida');
+                    // create a new company cargo (from provided fields)
+                    await this.companyCargosService.createFromGeneric(companyId, res);
+                    this.snack.open('Cargo vinculado à empresa criado com sucesso', 'Fechar', {duration: 3000});
+                    this.loadPage(0, true);
+                } else {
+                    await this.cargosService.createCargo(res);
+                    this.snack.open('Cargo criado com sucesso', 'Fechar', {duration: 3000});
+                    this.loadPage(0, true);
+                }
             } catch (e: any) {
                 this.snack.open(e?.message ?? 'Erro ao criar cargo', 'Fechar', {duration: 4000});
             }
@@ -199,13 +270,25 @@ export class CargosListComponent implements OnInit, OnDestroy {
     }
 
     editCargo(c: Cargo) {
-        const ref = this.dialog.open(CargoDialogComponent, {width: '600px', data: c, disableClose: true, hasBackdrop: true});
+        // If company-scoped view, the item might be a CompanyCargo. Handle both cases.
+        const payload = c as any;
+        const ref = this.dialog.open(CargoDialogComponent, {width: '600px', data: payload, disableClose: true, hasBackdrop: true});
         ref.afterClosed().subscribe(async (res: any) => {
             if (!res) return;
             try {
-                await this.cargosService.updateCargo(c.id, res);
-                this.snack.open('Cargo atualizado com sucesso', 'Fechar', {duration: 3000});
-                this.loadPage(0, true);
+                const adminScopeCompanyId = this.cargosService.getAdminScopeCompanyId();
+                const isAdminGlobalView = this.isAdmin && !adminScopeCompanyId;
+
+                if (!isAdminGlobalView) {
+                    const cc = payload as CompanyCargo;
+                    await this.companyCargosService.updateCargo(cc.id, res);
+                    this.snack.open('Cargo atualizado com sucesso', 'Fechar', {duration: 3000});
+                    this.loadPage(0, true);
+                } else {
+                    await this.cargosService.updateCargo(payload.id, res);
+                    this.snack.open('Cargo atualizado com sucesso', 'Fechar', {duration: 3000});
+                    this.loadPage(0, true);
+                }
             } catch (e: any) {
                 this.snack.open(e?.message ?? 'Erro ao atualizar cargo', 'Fechar', {duration: 4000});
             }
@@ -222,12 +305,35 @@ export class CargosListComponent implements OnInit, OnDestroy {
         });
     }
 
-    toggleActive(c: Cargo) {
-        this.cargosService.setActive(c.id, c.status !== 'ativo').then(() => {
+    async toggleActive(c: any) {
+        // Detect whether item is a CompanyCargo (scoped) or a global Cargo
+        const isCompanyCargo = !!c?.companyId || (typeof c?.id === 'string' && c.id.startsWith('ccargo_'));
+
+        if (isCompanyCargo) {
+            try {
+                const cc = c as CompanyCargo;
+                const newStatus = cc.status !== 'ativo';
+                await this.companyCargosService.updateCargo(cc.id, { status: newStatus ? 'ativo' : 'inativo' });
+                const msg = newStatus ? 'Cargo ativado com sucesso' : 'Cargo inativado com sucesso';
+                this.snack.open(msg, 'Fechar', { duration: 3000 });
+                await this.loadPage(0, true);
+                return;
+            } catch (err: any) {
+                console.error('Erro ao atualizar company cargo:', err?.message ?? err);
+                // If update failed because the document id isn't present, fall through to try global
+            }
+        }
+
+        // Fallback / global cargo
+        try {
+            await this.cargosService.setActive(c.id, c.status !== 'ativo');
             const msg = c.status !== 'ativo' ? 'Cargo ativado com sucesso' : 'Cargo inativado com sucesso';
-            this.snack.open(msg, 'Fechar', {duration: 3000});
-            this.loadPage(0, true);
-        });
+            this.snack.open(msg, 'Fechar', { duration: 3000 });
+            await this.loadPage(0, true);
+        } catch (err: any) {
+            console.error('Erro ao atualizar cargo global:', err?.message ?? err);
+            this.snack.open(err?.message ?? 'Erro ao atualizar cargo', 'Fechar', { duration: 4000 });
+        }
     }
 
     async handleFile(file?: File) {

@@ -12,6 +12,8 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { RisksRepository } from '../repositories/risks.repository';
 import { Risk } from '../models/risk.model';
 import { AuditHistoryDialogComponent, AuditHistoryData } from '../../../core/components/audit-history-dialog.component';
+import { SessionService } from '../../../core/services/session.service';
+import { CompanyRisksService } from '../services/company-risks.service';
 
 @Component({
   selector: 'app-cargo-dialog',
@@ -207,6 +209,8 @@ export class CargoDialogComponent implements OnInit {
   readOnly = false;
   private readonly data = inject(MAT_DIALOG_DATA);
   private readonly risksRepo = inject(RisksRepository);
+  private readonly session = inject(SessionService);
+  private readonly companyRisksService = inject(CompanyRisksService);
   private readonly cd = inject(ChangeDetectorRef);
   private readonly auditDialog = inject(MatDialog);
 
@@ -277,12 +281,22 @@ export class CargoDialogComponent implements OnInit {
     this.cd.markForCheck();
 
     try {
-      // Carregar todos os riscos ativos (limite alto para pegar todos)
-      const result = await this.risksRepo.listByNamePaged(null, '', 500);
-      const risks = (result.docs || []).filter((r) => r.status === 'ativo');
-      // Ordenar por grupo de risco
-      this.allRisks = this.sortByRiskGroup(risks);
-    } catch {
+      // Determine scope: if CLIENTE or ADMIN with company selected -> load company risks
+      const isAdmin = this.session.hasRole(['ADMIN'] as any);
+      const adminScopeCompanyId = this.session.adminScopeCompanyId ? this.session.adminScopeCompanyId() : null;
+      const companyId = isAdmin ? (adminScopeCompanyId ?? '') : (this.session.user()?.companyId ?? '');
+
+      if (companyId) {
+        const list = await this.companyRisksService.listByCompany(companyId);
+        const risks = (list || []).filter((r) => r.status === 'ativo');
+        this.allRisks = this.sortByRiskGroup(risks as Risk[]);
+      } else {
+        // global generic risks
+        const result = await this.risksRepo.listByNamePaged(null, '', 500);
+        const risks = (result.docs || []).filter((r: Risk) => r.status === 'ativo');
+        this.allRisks = this.sortByRiskGroup(risks as Risk[]);
+      }
+    } catch (e) {
       this.allRisks = [];
     } finally {
       this.risksLoading = false;

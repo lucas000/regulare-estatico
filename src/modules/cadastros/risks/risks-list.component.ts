@@ -12,6 +12,8 @@ import { MatPaginator, MatPaginatorModule, PageEvent } from '@angular/material/p
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { debounceTime, distinctUntilChanged } from 'rxjs/operators';
 import { Subscription } from 'rxjs';
+import { SessionService } from '../../../core/services/session.service';
+import { CompanyRisksService } from '../services/company-risks.service';
 
 import { Risk } from '../models/risk.model';
 import { RisksService } from '../services/risks.service';
@@ -42,6 +44,12 @@ export class RisksListComponent implements OnInit, OnDestroy {
   private readonly dialog = inject(MatDialog);
   private readonly cd = inject(ChangeDetectorRef);
   private readonly snack = inject(MatSnackBar);
+  private readonly session = inject(SessionService);
+  private readonly companyRisksService = inject(CompanyRisksService);
+  // access control flags
+  isCliente = false;
+  isAdmin = false;
+  hasAdminScope = false;
 
   columns = ['name', 'riskGroup', 'evaluationType', 'esocialCode', 'status', 'acoes'];
   risks: Risk[] = [];
@@ -64,6 +72,10 @@ export class RisksListComponent implements OnInit, OnDestroy {
   @ViewChild(MatPaginator) paginator?: MatPaginator;
 
   ngOnInit(): void {
+    this.isCliente = this.session.hasRole(['CLIENTE'] as any);
+    this.isAdmin = this.session.hasRole(['ADMIN'] as any);
+    this.hasAdminScope = !!(this.session.adminScopeCompanyId ? this.session.adminScopeCompanyId() : null);
+
     this.subs = this.searchControl.valueChanges.pipe(debounceTime(300), distinctUntilChanged()).subscribe((v: string | null) => {
       this.filterTerm = v ?? '';
       this.loadPage(0, true);
@@ -87,20 +99,55 @@ export class RisksListComponent implements OnInit, OnDestroy {
     const reqId = ++this._reqId;
 
     try {
-      const startAfterDoc = index > 0 ? this.cursors[index - 1] : undefined;
-      const res: any = await this.risksService.listRisksPaged(this.filterTerm, this.pageSize, startAfterDoc);
-      if (reqId !== this._reqId) return;
+      // Determine scope: if not ADMIN -> use company risks; if ADMIN and has adminScopeCompanyId -> use company risks
+      const isAdmin = this.session.hasRole(['ADMIN'] as any);
+      const adminScopeCompanyId = this.session.adminScopeCompanyId ? this.session.adminScopeCompanyId() : null;
 
-      this.risks = (res.docs as Risk[]) ?? [];
-      this.dataSource.data = this.risks;
-      this.cursors[index] = res.lastDoc;
-      this.pageIndex = index;
-      this.hasMore = Array.isArray(res.docs) && res.docs.length === this.pageSize;
+      const companyId = isAdmin ? (adminScopeCompanyId ?? '') : (this.session.user()?.companyId ?? '');
 
-      this.total = (this.pageIndex + (this.hasMore ? 2 : 1)) * this.pageSize;
-      if (this.paginator) {
-        this.paginator.pageIndex = this.pageIndex;
-        this.paginator.length = this.total;
+      if (companyId) {
+        // company-scoped view: fetch company_risks and apply client-side pagination & optional filter
+        const all = await this.companyRisksService.listByCompany(companyId);
+        if (reqId !== this._reqId) return;
+
+        let filtered = all;
+        const t = String(this.filterTerm ?? '').trim().toLowerCase();
+        if (t) {
+          filtered = all.filter((r: any) => (r.name || '').toLowerCase().includes(t));
+        }
+
+        // emulate pagination
+        const start = index * this.pageSize;
+        const page = filtered.slice(start, start + this.pageSize);
+
+        this.risks = page as Risk[];
+        this.dataSource.data = this.risks;
+        this.pageIndex = index;
+        this.hasMore = start + this.pageSize < filtered.length;
+        this.total = filtered.length;
+
+        // adjust paginator
+        if (this.paginator) {
+          this.paginator.pageIndex = this.pageIndex;
+          this.paginator.length = this.total;
+        }
+      } else {
+        // global admin view: list generic risks paged (existing behavior)
+        const startAfterDoc = index > 0 ? this.cursors[index - 1] : undefined;
+        const res: any = await this.risksService.listRisksPaged(this.filterTerm, this.pageSize, startAfterDoc);
+        if (reqId !== this._reqId) return;
+
+        this.risks = (res.docs as Risk[]) ?? [];
+        this.dataSource.data = this.risks;
+        this.cursors[index] = res.lastDoc;
+        this.pageIndex = index;
+        this.hasMore = Array.isArray(res.docs) && res.docs.length === this.pageSize;
+
+        this.total = (this.pageIndex + (this.hasMore ? 2 : 1)) * this.pageSize;
+        if (this.paginator) {
+          this.paginator.pageIndex = this.pageIndex;
+          this.paginator.length = this.total;
+        }
       }
     } finally {
       if (reqId === this._reqId) {
@@ -149,13 +196,29 @@ export class RisksListComponent implements OnInit, OnDestroy {
     }
   }
 
+  private getCurrentCompanyId(): string {
+    const isAdmin = this.session.hasRole(['ADMIN'] as any);
+    const adminScopeCompanyId = this.session.adminScopeCompanyId ? this.session.adminScopeCompanyId() : null;
+    return isAdmin ? (adminScopeCompanyId ?? '') : (this.session.user()?.companyId ?? '');
+  }
+
   newRisk() {
     const ref = this.dialog.open(RiskDialogComponent, { width: '600px', disableClose: true, hasBackdrop: true });
     ref.afterClosed().subscribe(async (res: any) => {
       if (!res) return;
-      await this.risksService.createRisk(res);
-      this.snack.open('Risco criado com sucesso', 'Fechar', { duration: 3000 });
-      this.loadPage(0, true);
+      const companyId = this.getCurrentCompanyId();
+      try {
+        if (companyId) {
+          await this.companyRisksService.createCompanyRisk(companyId, res as any);
+          this.snack.open('Risco da empresa criado com sucesso', 'Fechar', { duration: 3000 });
+        } else {
+          await this.risksService.createRisk(res);
+          this.snack.open('Risco criado com sucesso', 'Fechar', { duration: 3000 });
+        }
+        this.loadPage(0, true);
+      } catch (e: any) {
+        this.snack.open(e?.message ?? 'Erro ao criar risco', 'Fechar', { duration: 4000 });
+      }
     });
   }
 
@@ -163,18 +226,44 @@ export class RisksListComponent implements OnInit, OnDestroy {
     const ref = this.dialog.open(RiskDialogComponent, { width: '600px', data: r, disableClose: true, hasBackdrop: true });
     ref.afterClosed().subscribe(async (res: any) => {
       if (!res) return;
-      await this.risksService.updateRisk(r.id, res);
-      this.snack.open('Risco atualizado com sucesso', 'Fechar', { duration: 3000 });
-      this.loadPage(0, true);
+
+      const companyId = this.getCurrentCompanyId();
+      try {
+        if (companyId) {
+          // if company-scoped, update in company_risks
+          await this.companyRisksService.updateRisk(r.id, res as any);
+          this.snack.open('Risco da empresa atualizado com sucesso', 'Fechar', { duration: 3000 });
+        } else {
+          await this.risksService.updateRisk(r.id, res);
+          this.snack.open('Risco atualizado com sucesso', 'Fechar', { duration: 3000 });
+        }
+        this.loadPage(0, true);
+      } catch (e: any) {
+        this.snack.open(e?.message ?? 'Erro ao atualizar risco', 'Fechar', { duration: 4000 });
+      }
     });
   }
 
   toggleActive(r: Risk) {
-    this.risksService.setActive(r.id, r.status !== 'ativo').then(() => {
-      const msg = r.status !== 'ativo' ? 'Risco ativado com sucesso' : 'Risco inativado com sucesso';
-      this.snack.open(msg, 'Fechar', { duration: 3000 });
-      this.loadPage(0, true);
-    });
+    const companyId = this.getCurrentCompanyId();
+    const newStatus = r.status !== 'ativo';
+    if (companyId) {
+      this.companyRisksService.setActive(r.id, newStatus).then(() => {
+        const msg = newStatus ? 'Risco ativado com sucesso' : 'Risco inativado com sucesso';
+        this.snack.open(msg, 'Fechar', { duration: 3000 });
+        this.loadPage(0, true);
+      }).catch((err: any) => {
+        this.snack.open(err?.message ?? 'Erro ao atualizar risco', 'Fechar', { duration: 4000 });
+      });
+    } else {
+      this.risksService.setActive(r.id, newStatus).then(() => {
+        const msg = newStatus ? 'Risco ativado com sucesso' : 'Risco inativado com sucesso';
+        this.snack.open(msg, 'Fechar', { duration: 3000 });
+        this.loadPage(0, true);
+      }).catch((err: any) => {
+        this.snack.open(err?.message ?? 'Erro ao atualizar risco', 'Fechar', { duration: 4000 });
+      });
+    }
   }
 
   groupLabel(g: any): string {

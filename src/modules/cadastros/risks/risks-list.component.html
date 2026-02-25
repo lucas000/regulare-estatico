@@ -5,8 +5,8 @@
         <input matInput placeholder="Buscar por nome" [formControl]="searchControl" />
       </mat-form-field>
     </div>
-    <div>
-      <button mat-flat-button color="primary" (click)="newRisk()">Novo Risco</button>
+    <div *ngIf="!isCliente && !hasAdminScope">
+      <button  mat-flat-button color="primary" (click)="newRisk()">Novo Risco</button>
     </div>
   </div>
 

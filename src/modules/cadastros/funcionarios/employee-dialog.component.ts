@@ -1,4 +1,4 @@
-import {ChangeDetectionStrategy, Component, inject, ChangeDetectorRef} from '@angular/core';
+import {ChangeDetectionStrategy, Component, inject, ChangeDetectorRef, OnDestroy} from '@angular/core';
 import {CommonModule} from '@angular/common';
 import {MatDialogRef, MAT_DIALOG_DATA, MatDialogModule, MatDialog} from '@angular/material/dialog';
 import {ReactiveFormsModule, FormBuilder, FormGroup, Validators, FormControl} from '@angular/forms';
@@ -10,15 +10,15 @@ import {MatSelectModule} from '@angular/material/select';
 import {MatAutocompleteModule} from '@angular/material/autocomplete';
 import {MatIconModule} from '@angular/material/icon';
 import {MatTooltipModule} from '@angular/material/tooltip';
-import {CompaniesRepository} from '../repositories/companies.repository';
 import {UnitsRepository} from '../repositories/units.repository';
 import {CargosRepository} from '../repositories/cargos.repository';
+import {CompanyCargosService} from '../services/company-cargos.service';
 import {SectorsFiltersRepository} from '../repositories/sectors-filters.repository';
 import {SessionService} from '../../../core/services/session.service';
 import {CompaniesService} from '../services/companies.service';
 import {LocalidadesService, Estado, Municipio} from '../../../core/services/localidades.service';
-import {debounceTime, distinctUntilChanged, switchMap} from 'rxjs/operators';
-import {Observable, of} from 'rxjs';
+import {debounceTime, distinctUntilChanged, switchMap, startWith} from 'rxjs/operators';
+import {Observable, of, Subscription} from 'rxjs';
 import {AuditHistoryDialogComponent, AuditHistoryData} from '../../../core/components/audit-history-dialog.component';
 
 @Component({
@@ -200,20 +200,16 @@ import {AuditHistoryDialogComponent, AuditHistoryData} from '../../../core/compo
             </div>
 
             <div class="grid">
-                <!-- Cargo with autocomplete -->
-                <mat-form-field appearance="fill">
+                <!-- Cargo selection: use company-linked cargos (company_cargos collection) -->
+                <mat-form-field appearance="fill" class="full">
                     <mat-label>Cargo</mat-label>
-                    <input type="text" matInput [formControl]="cargoCtrl" [matAutocomplete]="autoCargo"
-                           [errorStateMatcher]="cargoErrorMatcher" placeholder="Digite o nome ou CBO"/>
-                    <mat-autocomplete #autoCargo="matAutocomplete"
-                                      (optionSelected)="onCargoSelected($event.option.value)">
-                        <mat-option *ngFor="let c of (cargos$ | async)" [value]="c">{{ c.name }}— {{ c.cbo }}
-                        </mat-option>
-                        <mat-option *ngIf="loadingCargos" disabled>Carregando...</mat-option>
-                    </mat-autocomplete>
-                    <mat-error>Obrigatório</mat-error>
+                    <mat-select formControlName="cargoId" [disabled]="!isCompanyCargos || cargos.length === 0">
+                        <mat-option *ngIf="!isCompanyCargos || cargos.length === 0" [value]="">Nenhum cargo vinculado</mat-option>
+                        <mat-option *ngFor="let c of cargos" [value]="c.id">{{ c.name }} — {{ c.cbo }}</mat-option>
+                    </mat-select>
+                    <mat-error *ngIf="(submitted || form.get('cargoId')?.touched) && form.get('cargoId')?.invalid">Obrigatório</mat-error>
                 </mat-form-field>
-
+            
                 <mat-form-field appearance="fill">
                     <mat-label>Data de admissão</mat-label>
                     <input
@@ -373,7 +369,7 @@ import {AuditHistoryDialogComponent, AuditHistoryData} from '../../../core/compo
     `],
     changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class EmployeeDialogComponent {
+export class EmployeeDialogComponent implements OnDestroy {
     form!: FormGroup;
     cargoCtrl = new FormControl('', [Validators.required]);
     cargos$!: Observable<any[]>;
@@ -406,9 +402,9 @@ export class EmployeeDialogComponent {
 
 
     private readonly data = inject(MAT_DIALOG_DATA);
-    private readonly companiesRepo = inject(CompaniesRepository);
     private readonly unitsRepo = inject(UnitsRepository);
     private readonly cargosRepo = inject(CargosRepository);
+    private readonly companyCargosService = inject(CompanyCargosService);
     private readonly cd = inject(ChangeDetectorRef);
     private readonly sectorsRepo = inject(SectorsFiltersRepository);
     private readonly session = inject(SessionService);
@@ -418,13 +414,19 @@ export class EmployeeDialogComponent {
     companies: any[] = [];
     units: any[] = [];
     sectors: any[] = [];
-    private selectedCargo: any | null = null;
-    sectorsLoading = false;
-    submitted = false;
+    cargos: any[] = [];
+    isCompanyCargos = false;
+    private cargoSub?: Subscription;
+    vazio = "";
+    
     companiesLoading = false;
     unitsLoading = false;
+    sectorsLoading = false;
+    
     private initializing = true;
     isEdit = false;
+    submitted = false;
+    selectedCargo: any = null;
 
     // Endereço - estados e municípios
     private readonly localidades = inject(LocalidadesService);
@@ -518,8 +520,11 @@ export class EmployeeDialogComponent {
             if (!v) {
                 this.units = [];
                 this.sectors = [];
+                this.cargos = [];
+                this.isCompanyCargos = false;
                 if (!this.initializing) {
-                    this.form.patchValue({unitId: '', sectorId: ''}, {emitEvent: false});
+                    this.form.patchValue({unitId: '', sectorId: '', cargoId: ''}, {emitEvent: false});
+                    this.cargoCtrl.setValue('', {emitEvent: false});
                 }
                 this.cd.markForCheck();
                 return;
@@ -529,8 +534,22 @@ export class EmployeeDialogComponent {
             this.cd.markForCheck();
             try {
                 this.units = await this.unitsRepo.listBy('companyId' as any, v, 500);
+                
+                // Carregar cargos da empresa para decidir entre select e autocomplete
+                this.loadingCargos = true;
+                this.cd.markForCheck();
+                const companyCargos = await this.companyCargosService.listByCompany(v);
+                if (companyCargos.length > 0) {
+                    this.isCompanyCargos = true;
+                    const sorted = companyCargos.slice().sort((a, b) => a.name.localeCompare(b.name));
+                    this.cargos = sorted;
+                } else {
+                    this.isCompanyCargos = false;
+                    this.cargos = [];
+                }
             } finally {
                 this.unitsLoading = false;
+                this.loadingCargos = false;
                 if (!this.initializing) {
                     this.form.patchValue({unitId: '', sectorId: ''}, {emitEvent: false});
                     this.sectors = [];
@@ -568,23 +587,42 @@ export class EmployeeDialogComponent {
 
         // Setup cargo autocomplete stream
         this.cargos$ = this.cargoCtrl.valueChanges.pipe(
+            startWith(''),
             debounceTime(300),
             distinctUntilChanged(),
-            switchMap((term: any) => {
-                const t = typeof term === 'string' ? term : '';
-                // If user starts typing after selecting, clear the selected cargoId
-                if (this.selectedCargo && t && !t.includes(this.selectedCargo.cbo) && !t.includes(this.selectedCargo.name)) {
+             switchMap((term: any) => {
+                 const t = typeof term === 'string' ? term : '';
+
+                // If company cargos were loaded, perform a local filter so the autocomplete shows them
+                if (this.isCompanyCargos) {
+                    const list = (this.cargos || [])
+                        .filter((c: any) => {
+                            if (!t) return true;
+                            const txt = t.toString().toUpperCase();
+                            return (c.name || '').toUpperCase().includes(txt) || (c.cbo || '').toString().includes(txt);
+                        })
+                        .slice(0, 20);
+                    return of(list);
+                }
+
+                 // If user starts typing after selecting, clear the selected cargoId
+                 if (this.selectedCargo && t && !t.includes(this.selectedCargo.cbo) && !t.includes(this.selectedCargo.name)) {
                     this.selectedCargo = null;
                     this.form.patchValue({cargoId: ''});
-                }
-                if (!t || t.length < 1) return of([]);
-                this.loadingCargos = true;
-                return this.cargosRepo.searchByNameOrCbo(t?.toString().toUpperCase(), 20) as any;
-            })
-        ) as any;
+                 }
+                 if (!t || t.length < 1) return of([]);
+                 this.loadingCargos = true;
+                 // Se não tem cargos vinculados, continua usando a busca genérica
+                 return this.cargosRepo.searchByNameOrCbo(t?.toString().toUpperCase(), 20) as any;
+             })
+         ) as any;
 
         // Reset loading flag when results arrive
-        this.cargos$.subscribe({next: () => (this.loadingCargos = false), error: () => (this.loadingCargos = false)});
+        this.cargoSub = this.cargos$.subscribe({next: () => (this.loadingCargos = false), error: () => (this.loadingCargos = false)});
+    }
+
+    ngOnDestroy(): void {
+        this.cargoSub?.unsubscribe();
     }
 
     private async bootstrapInitialData() {
@@ -602,9 +640,26 @@ export class EmployeeDialogComponent {
                 this.cd.markForCheck();
                 try {
                     this.units = await this.unitsRepo.listBy('companyId' as any, companyId, 500);
-                } finally {
+                    
+                    // Carregar cargos da empresa para decidir entre select e autocomplete no bootstrap
+                    const companyCargos = await this.companyCargosService.listByCompany(companyId);
+                    if (companyCargos.length > 0) {
+                        this.isCompanyCargos = true;
+                        const sorted = companyCargos.slice().sort((a, b) => a.name.localeCompare(b.name));
+                        this.cargos = sorted;
+
+                         // Se for edição, garantir que o cargo selecionado está no model (cargoId já está no form)
+                         const currentCargoId = this.form.get('cargoId')?.value;
+                         if (currentCargoId) {
+                             this.selectedCargo = this.cargos.find(c => c.id === currentCargoId) || null;
+                         }
+                     } else {
+                         this.isCompanyCargos = false;
+                         this.cargos = [];
+                     }
+                 } finally {
                     this.unitsLoading = false;
-                }
+                 }
             }
 
             // Trigger sectors load for edit mode
@@ -623,6 +678,7 @@ export class EmployeeDialogComponent {
         this.companies = await this.companiesService.listCompanies();
         this.cd.markForCheck();
     }
+
 
     onCargoSelected(cargo: any) {
         this.selectedCargo = cargo;
@@ -729,11 +785,12 @@ export class EmployeeDialogComponent {
 
     save() {
         this.submitted = true;
-        this.cargoCtrl.markAsTouched();
+        // mark cargoId control as touched for validation
+        this.form.get('cargoId')?.markAsTouched();
 
-        // Se não tem cargoId selecionado, marca cargoCtrl como inválido
+        // Se não tem cargoId selecionado, marca cargoId como inválido
         if (!this.form.get('cargoId')?.value) {
-            this.cargoCtrl.setErrors({required: true});
+            this.form.get('cargoId')?.setErrors({required: true});
         }
 
         if (this.form.invalid || !this.form.get('cargoId')?.value) {
@@ -743,7 +800,9 @@ export class EmployeeDialogComponent {
         }
 
         const v = this.form.value;
-        const cargo = this.selectedCargo;
+        // resolve cargo object from cargos[] by id, fallback to selectedCargo
+        const cargoId = v.cargoId;
+        const cargo = (this.cargos || []).find((c: any) => c.id === cargoId) || this.selectedCargo;
 
         const payload = {
             ...v,

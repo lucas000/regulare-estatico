@@ -352,6 +352,7 @@ export class UnitDialogComponent implements OnInit, OnDestroy {
     });
 
     if (this.data) {
+        console.log('data', this.data);
       const d: any = this.data;
       this.isEdit = !!d.id;
       this.form.patchValue({
@@ -359,13 +360,13 @@ export class UnitDialogComponent implements OnInit, OnDestroy {
         name: d.name ?? '',
         documentType: d.documentType ?? 'CNPJ',
         documentNumber: d.documentNumber ?? '',
-        street: d.address?.street ?? d.street ?? '',
-        complement: d.address?.complement ?? d.complement ?? '',
-        zipCode: d.address?.zipCode ?? d.zipCode ?? '',
-        state: d.address?.state ?? d.state ?? '',
-        city: d.address?.city ?? d.city ?? '',
-        latitude: d.address?.latitude ?? d.latitude ?? '',
-        longitude: d.address?.longitude ?? d.longitude ?? '',
+        street: d.address?.street ?? d.endereco?.street ?? d.logradouro ?? d.street ?? '',
+        complement: d.address?.complement ?? d.endereco?.complement ?? d.complemento ?? d.complement ?? '',
+        zipCode: d.address?.zipCode ?? d.endereco?.zipCode ?? d.cep ?? d.zipCode ?? '',
+        state: d.address?.state ?? d.endereco?.state ?? d.estado ?? d.state ?? '',
+        city: d.address?.city ?? d.endereco?.city ?? d.cidade ?? d.city ?? '',
+        latitude: d.address?.latitude ?? d.endereco?.latitude ?? d.lat ?? d.latitude ?? '',
+        longitude: d.address?.longitude ?? d.endereco?.longitude ?? d.lng ?? d.long ?? d.longitude ?? '',
         workEnvironmentDescription: d.workEnvironmentDescription ?? '',
         email: d.email ?? '',
         phone: d.phone ?? '',

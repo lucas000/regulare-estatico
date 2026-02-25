@@ -10,15 +10,17 @@
   </button>
 </div>
 
-<mat-dialog-content [formGroup]="form" class="company-dialog">
-  <!-- Identificação -->
-  <h3 class="section-title">Identificação</h3>
-  <div class="grid">
-    <mat-form-field appearance="fill" class="full">
-      <mat-label>Razão Social</mat-label>
-      <input matInput formControlName="razaoSocial" />
-      <mat-error *ngIf="form.get('razaoSocial')?.touched && form.get('razaoSocial')?.invalid">Obrigatório</mat-error>
-    </mat-form-field>
+<mat-tab-group class="company-tabs">
+  <mat-tab label="Dados Gerais">
+    <mat-dialog-content [formGroup]="form" class="company-dialog">
+      <!-- Identificação -->
+      <h3 class="section-title">Identificação</h3>
+      <div class="grid">
+        <mat-form-field appearance="fill" class="full">
+          <mat-label>Razão Social</mat-label>
+          <input matInput formControlName="razaoSocial" />
+          <mat-error *ngIf="form.get('razaoSocial')?.touched && form.get('razaoSocial')?.invalid">Obrigatório</mat-error>
+        </mat-form-field>
 
     <mat-form-field appearance="fill" class="full">
       <mat-label>Nome Fantasia</mat-label>
@@ -255,7 +257,134 @@
   </div>
 
   <p *ngIf="loadError" class="error">{{ loadError }}</p>
-</mat-dialog-content>
+    </mat-dialog-content>
+  </mat-tab>
+
+  <mat-tab label="Cargos da Empresa" *ngIf="isEdit">
+    <mat-dialog-content class="company-dialog">
+      <div style="margin-top: 16px;">
+        <mat-form-field appearance="fill" style="width: 100%;">
+          <mat-label>Adicionar a partir de cargos genéricos</mat-label>
+          <input type="text" matInput [formControl]="cargoCtrl" [matAutocomplete]="autoCargo"
+                 placeholder="Digite o nome ou CBO para buscar cargos genéricos"/>
+          <mat-autocomplete #autoCargo="matAutocomplete"
+                            (optionSelected)="onCargoSelected($event.option.value)">
+            <mat-option *ngFor="let c of (cargos$ | async)" [value]="c">
+              {{ c.name }} — {{ c.cbo }}
+            </mat-option>
+            <mat-option *ngIf="loadingCargos" disabled>Carregando...</mat-option>
+          </mat-autocomplete>
+          <mat-hint>Ao selecionar, uma cópia será criada para esta empresa.</mat-hint>
+        </mat-form-field>
+      </div>
+
+      <div class="cargos-list" style="margin-top: 24px;">
+        <h3 class="section-title">Cargos Vinculados</h3>
+        <table mat-table [dataSource]="companyCargos" style="width: 100%;" *ngIf="companyCargos.length > 0">
+          <ng-container matColumnDef="name">
+            <th mat-header-cell *matHeaderCellDef [style.width.%]="50">Nome</th>
+            <td mat-cell *matCellDef="let c">{{ c.name }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="cbo">
+            <th mat-header-cell *matHeaderCellDef [style.width.%]="20">CBO</th>
+            <td mat-cell *matCellDef="let c">{{ c.cbo }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="actions">
+            <th mat-header-cell *matHeaderCellDef [style.width.%]="30">Ações</th>
+            <td mat-cell *matCellDef="let c">
+              <button mat-icon-button color="primary" (click)="editCompanyCargo(c)" matTooltip="Editar cargo da empresa">
+                <mat-icon>edit</mat-icon>
+              </button>
+              <button mat-icon-button color="warn" (click)="removeCompanyCargo(c)" matTooltip="Remover vínculo">
+                <mat-icon>delete</mat-icon>
+              </button>
+            </td>
+          </ng-container>
+
+          <tr mat-header-row *matHeaderRowDef="['name', 'cbo', 'actions']"></tr>
+          <tr mat-row *matRowDef="let row; columns: ['name', 'cbo', 'actions'];"></tr>
+        </table>
+
+        <div *ngIf="companyCargos.length === 0 && !companyCargosLoading" style="text-align: center; padding: 32px; color: #666;">
+          Nenhum cargo vinculado a esta empresa.
+        </div>
+        <div *ngIf="companyCargosLoading" style="text-align: center; padding: 32px;">
+          Carregando cargos...
+        </div>
+      </div>
+    </mat-dialog-content>
+  </mat-tab>
+
+  <mat-tab label="Riscos da Empresa" *ngIf="isEdit">
+    <mat-dialog-content class="company-dialog">
+      <div style="margin-top: 16px;">
+        <mat-form-field appearance="fill" style="width: 100%;">
+          <mat-label>Adicionar a partir de riscos genéricos</mat-label>
+          <input type="text" matInput [formControl]="riskCtrl" [matAutocomplete]="autoRisk"
+                 placeholder="Digite o nome do risco para buscar" />
+          <mat-autocomplete #autoRisk="matAutocomplete" (optionSelected)="onRiskSelected($event.option.value)">
+            <mat-option *ngFor="let r of (risks$ | async)" [value]="r">
+              {{ r.name }} — {{ r.riskGroup }}
+            </mat-option>
+            <mat-option *ngIf="loadingRisks" disabled>Carregando...</mat-option>
+          </mat-autocomplete>
+          <mat-hint>Ao selecionar, uma cópia será criada para esta empresa.</mat-hint>
+        </mat-form-field>
+      </div>
+
+      <div class="company-risks-list" style="margin-top: 24px;">
+        <h3 class="section-title">Riscos Vinculados</h3>
+        <table mat-table [dataSource]="companyRisks" style="width: 100%;" *ngIf="companyRisks.length > 0">
+          <ng-container matColumnDef="name">
+            <th mat-header-cell *matHeaderCellDef [style.width.%]="40">Nome</th>
+            <td mat-cell *matCellDef="let r" [matTooltip]="r.description">{{ r.name }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="group">
+            <th mat-header-cell *matHeaderCellDef [style.width.%]="20">Grupo</th>
+            <td mat-cell *matCellDef="let r">
+              <span class="risk-badge" [ngClass]="'risk-' + r.riskGroup">{{ r.riskGroup }}</span>
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="type">
+            <th mat-header-cell *matHeaderCellDef [style.width.%]="15">Tipo</th>
+            <td mat-cell *matCellDef="let r">{{ r.riskType || r.evaluationType }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="classification">
+            <th mat-header-cell *matHeaderCellDef [style.width.%]="15">Classificação</th>
+            <td mat-cell *matCellDef="let r">{{ r.riskClassification }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="actions">
+            <th mat-header-cell *matHeaderCellDef [style.width.%]="10">Ações</th>
+            <td mat-cell *matCellDef="let r">
+              <button mat-icon-button color="primary" (click)="editCompanyRisk(r)" matTooltip="Editar risco">
+                <mat-icon>edit</mat-icon>
+              </button>
+              <button mat-icon-button color="warn" (click)="removeCompanyRisk(r)" matTooltip="Remover vínculo">
+                <mat-icon>delete</mat-icon>
+              </button>
+            </td>
+          </ng-container>
+
+          <tr mat-header-row *matHeaderRowDef="['name','group','type','classification','actions']"></tr>
+          <tr mat-row *matRowDef="let row; columns: ['name','group','type','classification','actions'];"></tr>
+        </table>
+
+        <div *ngIf="companyRisks.length === 0 && !companyRisksLoading" style="text-align: center; padding: 32px; color: #666;">
+          Nenhum risco vinculado a esta empresa.
+        </div>
+        <div *ngIf="companyRisksLoading" style="text-align: center; padding: 32px;">
+          Carregando riscos...
+        </div>
+      </div>
+    </mat-dialog-content>
+  </mat-tab>
+</mat-tab-group>
 
 <mat-dialog-actions align="end">
   <button mat-button (click)="cancel()">Cancelar</button>

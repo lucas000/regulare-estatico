@@ -14,3 +14,8 @@ export interface Cargo {
   createdBy: AuditUser;
   updatedBy?: AuditUser;
 }
+
+export interface CompanyCargo extends Cargo {
+  companyId: string;
+  sourceCargoId: string; // id do cargo genérico copiado
+}

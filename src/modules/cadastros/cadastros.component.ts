@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, ChangeDetectorRef, Component, inject, AfterViewInit, ViewChild, ComponentRef, ViewContainerRef } from '@angular/core';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, inject, AfterViewInit, ViewChild, ComponentRef, ViewContainerRef, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatCardModule } from '@angular/material/card';
 import { MatTabsModule, MatTabGroup } from '@angular/material/tabs';
@@ -57,6 +57,14 @@ export class CadastrosComponent implements AfterViewInit {
   private readonly session = inject(SessionService);
   private readonly cdr = inject(ChangeDetectorRef);
 
+  constructor() {
+    // Escutar mudanças no escopo admin para atualizar a visibilidade das abas
+    effect(() => {
+      this.session.adminScopeCompanyId();
+      this.cdr.markForCheck();
+    });
+  }
+
   @ViewChild(MatTabGroup) tabGroup!: MatTabGroup;
   @ViewChild(CompaniesListComponent) companiesList?: CompaniesListComponent;
   @ViewChild(UnitsListComponent) unitsList?: UnitsListComponent;
@@ -72,13 +80,19 @@ export class CadastrosComponent implements AfterViewInit {
   canSee(tab: 'EMPRESAS' | 'UNIDADES' | 'FUNCIONARIOS' | 'CARGOS' | 'SETORES' | 'RISCOS' | 'EPIS') {
     const isAdmin = this.session.hasRole(['ADMIN'] as any);
     const isCliente = this.session.hasRole(['CLIENTE'] as any);
+    const isGlobal = !this.session.adminScopeCompanyId();
 
-    // ADMIN: acesso total
-    if (isAdmin) return true;
+    // ADMIN: acesso total se global, restrito se tiver empresa selecionada
+    if (isAdmin) {
+      if (tab === 'EPIS') {
+        return isGlobal;
+      }
+      return true;
+    }
 
     // CLIENTE: acesso somente dentro de Cadastros (Empresas, Unidades, Setores, Funcionários, Cargos)
     if (isCliente) {
-      return tab === 'EMPRESAS' || tab === 'UNIDADES' || tab === 'SETORES' || tab === 'FUNCIONARIOS' || tab === 'CARGOS';
+      return tab === 'EMPRESAS' || tab === 'UNIDADES' || tab === 'SETORES' || tab === 'FUNCIONARIOS' || tab === 'CARGOS' || tab === 'RISCOS';
     }
 
     // Outros perfis (ex.: CONSULTOR) ficam sem acesso por este novo requisito

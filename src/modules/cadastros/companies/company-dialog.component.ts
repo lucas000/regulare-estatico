@@ -7,17 +7,30 @@ import {MatInputModule} from '@angular/material/input';
 import {MatButtonModule} from '@angular/material/button';
 import {MatSelectModule} from '@angular/material/select';
 import {MatAutocompleteModule} from '@angular/material/autocomplete';
-import {MatIconModule} from '@angular/material/icon';
+import {MatTabsModule} from '@angular/material/tabs';
+import {MatTableModule} from '@angular/material/table';
 import {MatChipsModule} from '@angular/material/chips';
 import {MatSnackBar, MatSnackBarModule} from '@angular/material/snack-bar';
 import {MatTooltipModule} from '@angular/material/tooltip';
 import {CompaniesRepository} from '../repositories/companies.repository';
-import {Subscription, debounceTime, distinctUntilChanged, switchMap, of, catchError, finalize} from 'rxjs';
+import {CompanyCargosService} from '../services/company-cargos.service';
+import {CargosRepository} from '../repositories/cargos.repository';
+import {Cargo, CompanyCargo} from '../models/cargo.model';
+import {CargoDialogComponent} from '../cargos/cargo-dialog.component';
+import {SessionService} from '../../../core/services/session.service';
+import {Subscription, Observable, debounceTime, distinctUntilChanged, switchMap, of, catchError, finalize, map, from} from 'rxjs';
 import {LocalidadesService, Estado, Municipio} from '../../../core/services/localidades.service';
 import {CompanyPersonType, CompanyType, CompanyCnae} from '../models/company.model';
 import {CnaeService, Cnae} from '../../../core/services/cnae.service';
 import {AuditHistoryDialogComponent, AuditHistoryData} from '../../../core/components/audit-history-dialog.component';
 import {MapCoordinatesDialogComponent, MapCoordinatesResult} from '../../../core/components/map-coordinates-dialog.component';
+import {MatIconModule} from "@angular/material/icon";
+import { EmployeesRepository } from '../repositories/employees.repository';
+import {CompanyRisksService} from '../services/company-risks.service';
+import {Risk} from '../models/risk.model';
+import {CompanyRisk} from '../models/company-risk.model';
+import {RisksRepository} from "../repositories/risks.repository";
+import { RiskDialogComponent } from '../risks/risk-dialog.component';
 
 function cnaeToCompanyCnae(c: Cnae | CompanyCnae | null | undefined): CompanyCnae {
     if (!c) return {id: '', descricao: '', observacoes: []};
@@ -48,6 +61,9 @@ function toUpperSafe(v: any): string {
         MatChipsModule,
         MatSnackBarModule,
         MatTooltipModule,
+        MatTabsModule,
+        MatTableModule,
+        // RiskDialogComponent removed from imports: opened dynamically via MatDialog
     ],
     templateUrl: './company-dialog.component.html',
     styleUrls: ['./company-dialog.component.scss'],
@@ -77,13 +93,38 @@ export class CompanyDialogComponent implements OnInit, OnDestroy {
 
     selectedCnaeMain: CompanyCnae | null = null;
     selectedCnaeSecondary: CompanyCnae[] = [];
+    
+    // Company Cargos UI state
+    companyCargos: CompanyCargo[] = [];
+    companyCargosLoading = false;
+    cargoCtrl = new FormControl('');
+    loadingCargos = false;
+    cargos$!: Observable<Cargo[]>;
+
+    // Company Risks UI state
+    companyRisks: CompanyRisk[] = [];
+    companyRisksLoading = false;
+    riskCtrl = new FormControl('');
+    loadingRisks = false;
+    risks$!: Observable<Risk[]>;
+
+    private readonly companyCargosService = inject(CompanyCargosService);
+    private readonly cargosRepo = inject(CargosRepository);
+    private readonly employeesRepo = inject(EmployeesRepository);
+    private readonly session = inject(SessionService);
+    private readonly dialog = inject(MatDialog);
+    private readonly companyRisksService = inject(CompanyRisksService);
+    private readonly risksRepo = inject(RisksRepository);
+    isAdmin = this.session.hasRole(['ADMIN'] as any);
+    // helper: admin scope flag (if ADMIN and not scoped to a company)
+    hasAdminScope = this.isAdmin && !(this.session as any).user?.()?.companyId;
 
     readonly personTypes: Array<{ value: CompanyPersonType; label: string }> = [
         {value: 'PJ', label: 'Pessoa Jurídica'},
         {value: 'PF', label: 'Pessoa Física'},
     ];
 
-    readonly companyTypes: Array<{ value: CompanyType; label: string }> = [
+    readonly companyTypes: Array<{ value: CompanyType, label: string }> = [
         {value: 'Fazenda', label: 'Fazenda'},
         {value: 'Indústria', label: 'Indústria'},
         {value: 'Revenda', label: 'Revenda'},
@@ -182,7 +223,7 @@ export class CompanyDialogComponent implements OnInit, OnDestroy {
         }
     }
 
-    ngOnInit(): void {
+    async ngOnInit(): Promise<void> {
         // Estados
         this.subs.add(
             this.localidades.getEstados().subscribe({
@@ -283,7 +324,209 @@ export class CompanyDialogComponent implements OnInit, OnDestroy {
                     this.cd.markForCheck();
                 })
         );
+
+        // Cargos Autocomplete (using reference from employee-dialog)
+        this.cargos$ = this.cargoCtrl.valueChanges.pipe(
+            debounceTime(300),
+            distinctUntilChanged(),
+            switchMap((term: any) => {
+                const t = typeof term === 'string' ? term : '';
+                if (!t || t.length < 1) return of([]);
+                this.loadingCargos = true;
+                return this.cargosRepo.searchByNameOrCbo(t.toUpperCase(), 20) as any;
+            })
+        ) as any;
+        this.subs.add(this.cargos$.subscribe({
+            next: () => { this.loadingCargos = false; this.cd.markForCheck(); },
+            error: () => { this.loadingCargos = false; this.cd.markForCheck(); }
+        }));
+
+        // Risks Autocomplete
+        this.risks$ = this.riskCtrl.valueChanges.pipe(
+            debounceTime(300),
+            distinctUntilChanged(),
+            switchMap((term: any) => {
+                const t = typeof term === 'string' ? term.trim() : '';
+                if (!t || t.length < 1) return of([]);
+                this.loadingRisks = true;
+                // Use repository paged search and map to docs
+                return from(this.risksRepo.listByNamePaged(null, t.toUpperCase(), 20)).pipe(
+                    map((res: any) => (res?.docs ?? []) as Risk[]),
+                    catchError(() => of([])),
+                    finalize(() => {
+                        this.loadingRisks = false;
+                        this.cd.markForCheck();
+                    })
+                );
+            })
+        ) as any;
+        this.subs.add(this.risks$.subscribe({
+            next: () => { this.loadingRisks = false; this.cd.markForCheck(); },
+            error: () => { this.loadingRisks = false; this.cd.markForCheck(); }
+        }));
+
+        if (this.isEdit && this.data?.id) {
+            await this.loadCompanyCargos();
+            await this.loadCompanyRisks();
+        }
     }
+
+    async loadCompanyCargos() {
+        if (!this.data?.id) return;
+        this.companyCargosLoading = true;
+        this.cd.markForCheck();
+        try {
+            this.companyCargos = await this.companyCargosService.listByCompany(this.data.id);
+        } finally {
+            this.companyCargosLoading = false;
+            this.cd.markForCheck();
+        }
+    }
+
+    async loadCompanyRisks() {
+        if (!this.data?.id) return;
+        this.companyRisksLoading = true;
+        this.cd.markForCheck();
+        try {
+            this.companyRisks = await this.companyRisksService.listByCompany(this.data.id);
+        } finally {
+            this.companyRisksLoading = false;
+            this.cd.markForCheck();
+        }
+    }
+
+    async onCargoSelected(cargo: Cargo) {
+        if (!this.data?.id) {
+            this.snack.open('Salve a empresa antes de vincular cargos.', 'OK', { duration: 3000 });
+            this.cargoCtrl.setValue('');
+            return;
+        }
+        
+        // Verifica se já existe
+        if (this.companyCargos.some(c => c.sourceCargoId === cargo.id || (c.name === cargo.name && c.cbo === cargo.cbo))) {
+            this.snack.open('Este cargo já está vinculado à empresa.', 'OK', { duration: 3000 });
+            this.cargoCtrl.setValue('');
+            return;
+        }
+
+        try {
+            await this.companyCargosService.createFromGeneric(this.data.id, cargo);
+            this.snack.open('Cargo vinculado com sucesso!', 'OK', { duration: 2000 });
+            this.cargoCtrl.setValue('');
+            await this.loadCompanyCargos();
+        } catch (e) {
+            this.snack.open('Erro ao vincular cargo.', 'OK', { duration: 3000 });
+        }
+    }
+
+    async onRiskSelected(risk: Risk) {
+        if (!this.data?.id) {
+            this.snack.open('Salve a empresa antes de vincular riscos.', 'OK', { duration: 3000 });
+            this.riskCtrl.setValue('');
+            return;
+        }
+
+        // Verifica se já existe
+        if (this.companyRisks.some(r => r.sourceRiskId === risk.id)) {
+            this.snack.open('Este risco já está vinculado à empresa.', 'OK', { duration: 3000 });
+            this.riskCtrl.setValue('');
+            return;
+        }
+
+        try {
+            await this.companyRisksService.createFromGeneric(this.data.id, risk);
+            this.snack.open('Risco vinculado com sucesso!', 'OK', { duration: 2000 });
+            this.riskCtrl.setValue('');
+            await this.loadCompanyRisks();
+        } catch (e) {
+            this.snack.open('Erro ao vincular risco.', 'OK', { duration: 3000 });
+        }
+    }
+
+    editCompanyCargo(cc: CompanyCargo) {
+        const ref = this.dialog.open(CargoDialogComponent, { width: '600px', data: { ...cc }, disableClose: true });
+        ref.afterClosed().subscribe(async (res) => {
+            if (!res) return;
+            try {
+                // Always update company_cargos when editing from company dialog
+                await this.companyCargosService.updateCargo(cc.id, res);
+                this.snack.open('Cargo atualizado!', 'OK', { duration: 2000 });
+                await this.loadCompanyCargos();
+            } catch (e) {
+                console.error('Erro ao atualizar cargo:', e);
+                this.snack.open('Erro ao atualizar cargo.', 'OK', { duration: 3000 });
+            }
+        });
+    }
+
+    editCompanyRisk(cr: CompanyRisk) {
+        const ref = this.dialog.open(RiskDialogComponent, { width: '800px', data: { ...cr }, disableClose: true });
+        ref.afterClosed().subscribe(async (res) => {
+            if (!res) return;
+            try {
+                await this.companyRisksService.updateRisk(cr.id, res);
+                this.snack.open('Risco atualizado!', 'OK', { duration: 2000 });
+                await this.loadCompanyRisks();
+            } catch (e) {
+                console.error('Erro ao atualizar risco:', e);
+                this.snack.open('Erro ao atualizar risco.', 'OK', { duration: 3000 });
+            }
+        });
+    }
+
+    async removeCompanyCargo(cc: CompanyCargo) {
+        if (!confirm(`Tem certeza que deseja remover o cargo "${cc.name}" desta empresa?`)) return;
+
+        // check if any employees are using this cargo in the company
+        try {
+            const companyId = this.data?.id as string | undefined;
+            if (companyId) {
+                const users = await this.employeesRepo.listByFilters({ companyId, cargoId: cc.id }, 1);
+                if (users && users.length > 0) {
+                    this.snack.open('Operação não permitida: existem funcionários vinculados a este cargo.', 'OK', { duration: 5000 });
+                    return;
+                }
+            }
+
+            await this.companyCargosService.deleteCargo(cc.id);
+            this.snack.open('Cargo removido!', 'OK', { duration: 2000 });
+            await this.loadCompanyCargos();
+         } catch (e) {
+             console.error('Erro ao remover cargo:', e);
+             this.snack.open('Erro ao remover cargo.', 'OK', { duration: 3000 });
+         }
+     }
+
+     async removeCompanyRisk(cr: CompanyRisk) {
+        if (!confirm(`Tem certeza que deseja remover o risco "${cr.name}" desta empresa?`)) return;
+
+        // check if any company_cargos reference this risk
+        try {
+            const companyId = this.data?.id as string | undefined;
+            if (companyId) {
+                // load cargos for the company
+                const companyCargos = await this.companyCargosService.listByCompany(companyId);
+                // check riskIds array on each company cargo
+                const used = companyCargos.some((cc: any) => {
+                    if (!cc || !Array.isArray(cc.riskIds)) return false;
+                    return cc.riskIds.includes(cr.id) || cc.riskIds.includes(cr.sourceRiskId);
+                });
+
+                if (used) {
+                    this.snack.open('Operação não permitida: existem cargos vinculados a este risco na empresa.', 'OK', { duration: 6000 });
+                    this.riskCtrl.setValue('');
+                    return;
+                }
+            }
+
+            await this.companyRisksService.deleteRisk(cr.id);
+            this.snack.open('Risco removido!', 'OK', { duration: 2000 });
+            await this.loadCompanyRisks();
+         } catch (e) {
+             console.error('Erro ao remover risco:', e);
+             this.snack.open('Erro ao remover risco.', 'OK', { duration: 3000 });
+         }
+     }
 
     ngOnDestroy(): void {
         this.subs.unsubscribe();

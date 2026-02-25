@@ -12,6 +12,10 @@
         "build": {
           "builder": "@angular-devkit/build-angular:browser",
           "options": {
+            "sourceMap": true,
+            "buildOptimizer": false,
+            "vendorChunk": true,
+            "extractLicenses": false,
             "outputPath": "dist/regulare-estatico",
             "index": "src/index.html",
             "main": "src/main.ts",
