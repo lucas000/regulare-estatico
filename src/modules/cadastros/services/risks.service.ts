@@ -62,7 +62,22 @@ export class RisksService {
       name: toUpperSafe(input.name),
       riskGroup: (input.riskGroup as any) ?? 'fisico',
       description: input.description ?? '',
-      evaluationType: (input.evaluationType as any) ?? 'qualitativa',
+      generatingSource: input.generatingSource ?? '',
+      preventiveControlMeasures: input.preventiveControlMeasures ?? '',
+
+      riskType: (input.riskType as any) ?? (input.evaluationType as any) ?? 'qualitativa',
+      evaluationType: (input.evaluationType as any) ?? (input.riskType as any) ?? 'qualitativa',
+
+      effectClassification: input.effectClassification,
+      frequency: input.frequency,
+      riskClassification: input.riskClassification,
+
+      insalubrity: input.insalubrity ?? 'Não',
+      insalubrityLevel: input.insalubrityLevel,
+      dangerousness: input.dangerousness ?? 'Não',
+      specialRetirement: input.specialRetirement ?? 'Não',
+      specialRetirementPeriod: input.specialRetirementPeriod,
+
       quantitativeValue: toNumberOrUndefined((input as any).quantitativeValue),
       toleranceLimit: toNumberOrUndefined((input as any).toleranceLimit),
       esocialCode: input.esocialCode ?? '',

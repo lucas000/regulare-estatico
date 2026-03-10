@@ -64,6 +64,9 @@ export class EmployeesService {
       unitId: input.unitId!,
       sectorId: input.sectorId!,
       name: input.name!,
+      socialName: input.socialName ?? '',
+      rg: input.rg ?? '',
+      rgIssuingAgency: input.rgIssuingAgency ?? '',
       cpf: input.cpf ?? '',
       cargoId: input.cargoId!,
       cargoName: input.cargoName ?? (input as any)['cargoName'] ?? '',
@@ -73,6 +76,20 @@ export class EmployeesService {
       esocialRegistration: input.esocialRegistration!,
       esocialCategory: input.esocialCategory!,
       admissionDate: input.admissionDate!,
+      birthDate: input.birthDate ?? '',
+      nisPis: input.nisPis ?? '',
+      gender: input.gender ?? '',
+      fatherName: input.fatherName ?? '',
+      motherName: input.motherName ?? '',
+      jobDescription: input.jobDescription ?? '',
+
+      // endereço
+      addressStreet: input.addressStreet ?? '',
+      addressNumber: input.addressNumber ?? '',
+      addressComplement: input.addressComplement ?? '',
+      addressZipCode: input.addressZipCode ?? '',
+      addressUf: input.addressUf ?? '',
+      addressCity: input.addressCity ?? '',
 
       // optionals (avoid undefined to keep Firestore happy)
       phone: input.phone ?? '',

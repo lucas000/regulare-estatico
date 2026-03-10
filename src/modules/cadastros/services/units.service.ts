@@ -64,6 +64,7 @@ export class UnitsService {
     const id = `unit_${makeId()}`;
 
     const street = input.address?.street ?? (input as any).street ?? '';
+    const number = input.address?.number ?? (input as any).addressNumber ?? '';
     const complement = input.address?.complement ?? (input as any).complement ?? null;
     const zipCode = input.address?.zipCode ?? (input as any).zipCode ?? null;
     const city = input.address?.city ?? (input as any).city ?? '';
@@ -90,6 +91,7 @@ export class UnitsService {
 
       address: {
         street,
+        number,
         complement,
         zipCode,
         city,
@@ -103,7 +105,7 @@ export class UnitsService {
       phone: phone ? phone : (undefined as any),
 
       status: (input.status ?? 'active') as any,
-      notes: (input as any).notes,
+      notes: input.notes ?? '',
 
       createdAt: now,
       updatedAt: now,
@@ -153,6 +155,7 @@ export class UnitsService {
         ? {
             address: {
               street: patch.address?.street ?? (patch as any).street ?? '',
+              number: patch.address?.number ?? (patch as any).addressNumber ?? '',
               city: city ?? '',
               state: state ?? '',
             },

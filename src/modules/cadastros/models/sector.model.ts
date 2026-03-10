@@ -15,6 +15,7 @@ export interface Sector {
   estimatedWorkers: number;
   status: SectorStatus;
   notes?: string;
+  equipmentIds?: string[]; // IDs de equipamentos (EPCs) vinculados ao setor (da coleção company_equipments)
   createdAt: string;
   createdBy: AuditUser;
   updatedAt?: string;

@@ -81,7 +81,22 @@ export class CompanyRisksService {
       name: String((input as any).name ?? '').toUpperCase(),
       riskGroup: (input as any).riskGroup ?? 'fisico',
       description: (input as any).description ?? '',
+      generatingSource: (input as any).generatingSource ?? '',
+      preventiveControlMeasures: (input as any).preventiveControlMeasures ?? '',
+
+      riskType: (input as any).riskType ?? (input as any).evaluationType ?? 'qualitativa',
       evaluationType: (input as any).evaluationType ?? (input as any).riskType ?? 'qualitativa',
+
+      effectClassification: (input as any).effectClassification,
+      frequency: (input as any).frequency,
+      riskClassification: (input as any).riskClassification,
+
+      insalubrity: (input as any).insalubrity ?? 'Não',
+      insalubrityLevel: (input as any).insalubrityLevel,
+      dangerousness: (input as any).dangerousness ?? 'Não',
+      specialRetirement: (input as any).specialRetirement ?? 'Não',
+      specialRetirementPeriod: (input as any).specialRetirementPeriod,
+
       quantitativeValue: (input as any).quantitativeValue,
       toleranceLimit: (input as any).toleranceLimit,
       measurementUnit: (input as any).measurementUnit,

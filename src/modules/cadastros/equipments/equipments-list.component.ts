@@ -15,8 +15,9 @@ import { debounceTime, distinctUntilChanged } from 'rxjs/operators';
 import { Subscription } from 'rxjs';
 
 import { Equipment } from '../models/equipment.model';
-import { EquipmentsService } from '../services/equipments.service';
+import { CompanyEquipmentsService } from '../services/company-equipments.service';
 import { EquipmentDialogComponent } from './equipment-dialog.component';
+import { SessionService } from '../../../core/services/session.service';
 
 @Component({
   selector: 'app-equipments-list',
@@ -40,10 +41,15 @@ import { EquipmentDialogComponent } from './equipment-dialog.component';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class EquipmentsListComponent implements OnInit, OnDestroy {
-  private readonly service = inject(EquipmentsService);
+  private readonly service = inject(CompanyEquipmentsService);
+  private readonly session = inject(SessionService);
   private readonly dialog = inject(MatDialog);
   private readonly cd = inject(ChangeDetectorRef);
   private readonly snack = inject(MatSnackBar);
+
+  isAdmin = this.session.hasRole(['ADMIN'] as any);
+  isCliente = false;
+  hasAdminScope = false;
 
   columns = ['name', 'type', 'hasCertification', 'certificationNumber', 'validUntil',  'status', 'acoes'];
   items: Equipment[] = [];
@@ -68,6 +74,9 @@ export class EquipmentsListComponent implements OnInit, OnDestroy {
   @ViewChild(MatPaginator) paginator?: MatPaginator;
 
   ngOnInit(): void {
+    this.isCliente = this.session.hasRole(['CLIENTE'] as any);
+    this.hasAdminScope = !!(this.session.adminScopeCompanyId ? this.session.adminScopeCompanyId() : null);
+
     this.subs.add(
       this.searchControl.valueChanges.pipe(debounceTime(300), distinctUntilChanged()).subscribe((v) => {
         this.filterTerm = (v ?? '').toString();
@@ -171,6 +180,10 @@ export class EquipmentsListComponent implements OnInit, OnDestroy {
   }
 
   newEquipment() {
+    if (!this.isAdmin) {
+      this.snack.open('Apenas administradores podem cadastrar EPIs globais.', 'Fechar', { duration: 3000 });
+      return;
+    }
     const ref = this.dialog.open(EquipmentDialogComponent, { width: '650px', disableClose: true, hasBackdrop: true });
     ref.afterClosed().subscribe(async (res: any) => {
       if (!res) return;
@@ -185,6 +198,10 @@ export class EquipmentsListComponent implements OnInit, OnDestroy {
   }
 
   editEquipment(equip: Equipment) {
+    if (!this.isAdmin && !this.isCliente) {
+      this.snack.open('Você não tem permissão para editar EPIs.', 'Fechar', { duration: 3000 });
+      return;
+    }
     const ref = this.dialog.open(EquipmentDialogComponent, { width: '600px', data: equip, disableClose: true, hasBackdrop: true });
     ref.afterClosed().subscribe(async (res: any) => {
       if (!res) return;
@@ -199,6 +216,10 @@ export class EquipmentsListComponent implements OnInit, OnDestroy {
   }
 
   toggleActive(equip: Equipment) {
+    if (!this.isAdmin && !this.isCliente) {
+      this.snack.open('Você não tem permissão para alterar o status de EPIs.', 'Fechar', { duration: 3000 });
+      return;
+    }
     this.service
       .setActive(equip.id, equip.status !== 'ativo')
       .then(() => {

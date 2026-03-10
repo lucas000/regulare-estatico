@@ -256,10 +256,17 @@ import {AuditHistoryDialogComponent, AuditHistoryData} from '../../../core/compo
 
             <div class="grid">
                 <mat-form-field appearance="fill">
+                    <mat-label>Número</mat-label>
+                    <input matInput formControlName="addressNumber" />
+                </mat-form-field>
+
+                <mat-form-field appearance="fill">
                     <mat-label>Complemento</mat-label>
                     <input matInput formControlName="addressComplement" />
                 </mat-form-field>
+            </div>
 
+            <div class="grid">
                 <mat-form-field appearance="fill">
                     <mat-label>CEP</mat-label>
                     <input matInput formControlName="addressZipCode" placeholder="00000-000" />
@@ -468,6 +475,7 @@ export class EmployeeDialogComponent implements OnDestroy {
 
             // Endereço
             addressStreet: ['', [Validators.required]],
+            addressNumber: [''],
             addressComplement: [''],
             addressZipCode: [''],
             addressUf: ['', [Validators.required]],

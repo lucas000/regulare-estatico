@@ -172,10 +172,17 @@ function toUpperSafe(v: any): string {
 
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
         <mat-form-field appearance="fill" style="width:100%">
+          <mat-label>Número</mat-label>
+          <input matInput formControlName="addressNumber" />
+        </mat-form-field>
+
+        <mat-form-field appearance="fill" style="width:100%">
           <mat-label>Complemento</mat-label>
           <input matInput formControlName="complement" />
         </mat-form-field>
+      </div>
 
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
         <mat-form-field appearance="fill" style="width:100%">
           <mat-label>CEP</mat-label>
           <input matInput formControlName="zipCode" placeholder="00000-000" />
@@ -335,6 +342,7 @@ export class UnitDialogComponent implements OnInit, OnDestroy {
       // cnaeMain/cnaeSecondary agora controlados fora do form (autocomplete)
 
       street: ['', [Validators.required]],
+      addressNumber: [''],
       complement: [''],
       zipCode: [''],
       city: ['', [Validators.required]],
@@ -361,6 +369,7 @@ export class UnitDialogComponent implements OnInit, OnDestroy {
         documentType: d.documentType ?? 'CNPJ',
         documentNumber: d.documentNumber ?? '',
         street: d.address?.street ?? d.endereco?.street ?? d.logradouro ?? d.street ?? '',
+        addressNumber: d.address?.number ?? d.endereco?.number ?? '',
         complement: d.address?.complement ?? d.endereco?.complement ?? d.complemento ?? d.complement ?? '',
         zipCode: d.address?.zipCode ?? d.endereco?.zipCode ?? d.cep ?? d.zipCode ?? '',
         state: d.address?.state ?? d.endereco?.state ?? d.estado ?? d.state ?? '',
@@ -590,6 +599,7 @@ export class UnitDialogComponent implements OnInit, OnDestroy {
 
       address: {
         street: raw.street,
+        number: raw.addressNumber || null,
         complement: raw.complement || null,
         zipCode: raw.zipCode || null,
         city: raw.city,

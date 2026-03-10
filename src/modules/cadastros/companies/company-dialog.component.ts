@@ -31,6 +31,11 @@ import {Risk} from '../models/risk.model';
 import {CompanyRisk} from '../models/company-risk.model';
 import {RisksRepository} from "../repositories/risks.repository";
 import { RiskDialogComponent } from '../risks/risk-dialog.component';
+import {CompanyEquipmentsService} from '../services/company-equipments.service';
+import {Equipment} from '../models/equipment.model';
+import {CompanyEquipment} from '../models/company-equipment.model';
+import {EquipmentsRepository} from '../repositories/equipments.repository';
+import {EquipmentDialogComponent} from '../equipments/equipment-dialog.component';
 
 function cnaeToCompanyCnae(c: Cnae | CompanyCnae | null | undefined): CompanyCnae {
     if (!c) return {id: '', descricao: '', observacoes: []};
@@ -108,6 +113,13 @@ export class CompanyDialogComponent implements OnInit, OnDestroy {
     loadingRisks = false;
     risks$!: Observable<Risk[]>;
 
+    // Company Equipments UI state
+    companyEquipments: CompanyEquipment[] = [];
+    companyEquipmentsLoading = false;
+    equipmentCtrl = new FormControl('');
+    loadingEquipments = false;
+    equipments$!: Observable<Equipment[]>;
+
     private readonly companyCargosService = inject(CompanyCargosService);
     private readonly cargosRepo = inject(CargosRepository);
     private readonly employeesRepo = inject(EmployeesRepository);
@@ -115,6 +127,8 @@ export class CompanyDialogComponent implements OnInit, OnDestroy {
     private readonly dialog = inject(MatDialog);
     private readonly companyRisksService = inject(CompanyRisksService);
     private readonly risksRepo = inject(RisksRepository);
+    private readonly companyEquipmentsService = inject(CompanyEquipmentsService);
+    private readonly equipmentsRepo = inject(EquipmentsRepository);
     isAdmin = this.session.hasRole(['ADMIN'] as any);
     // helper: admin scope flag (if ADMIN and not scoped to a company)
     hasAdminScope = this.isAdmin && !(this.session as any).user?.()?.companyId;
@@ -162,6 +176,7 @@ export class CompanyDialogComponent implements OnInit, OnDestroy {
 
             // Endereço
             addressStreet: ['', [Validators.required]],
+            addressNumber: [''],
             addressComplement: [''],
             addressZipCode: [''],
             addressUf: ['', [Validators.required]],
@@ -365,9 +380,33 @@ export class CompanyDialogComponent implements OnInit, OnDestroy {
             error: () => { this.loadingRisks = false; this.cd.markForCheck(); }
         }));
 
+        // Equipments Autocomplete
+        this.equipments$ = this.equipmentCtrl.valueChanges.pipe(
+            debounceTime(300),
+            distinctUntilChanged(),
+            switchMap((term: any) => {
+                const t = typeof term === 'string' ? term.trim() : '';
+                if (!t || t.length < 1) return of([]);
+                this.loadingEquipments = true;
+                return from(this.equipmentsRepo.listByNamePaged(t.toUpperCase(), 20)).pipe(
+                    map((res: any) => (res?.docs ?? []) as Equipment[]),
+                    catchError(() => of([])),
+                    finalize(() => {
+                        this.loadingEquipments = false;
+                        this.cd.markForCheck();
+                    })
+                );
+            })
+        ) as any;
+        this.subs.add(this.equipments$.subscribe({
+            next: () => { this.loadingEquipments = false; this.cd.markForCheck(); },
+            error: () => { this.loadingEquipments = false; this.cd.markForCheck(); }
+        }));
+
         if (this.isEdit && this.data?.id) {
             await this.loadCompanyCargos();
             await this.loadCompanyRisks();
+            await this.loadCompanyEquipments();
         }
     }
 
@@ -391,6 +430,18 @@ export class CompanyDialogComponent implements OnInit, OnDestroy {
             this.companyRisks = await this.companyRisksService.listByCompany(this.data.id);
         } finally {
             this.companyRisksLoading = false;
+            this.cd.markForCheck();
+        }
+    }
+
+    async loadCompanyEquipments() {
+        if (!this.data?.id) return;
+        this.companyEquipmentsLoading = true;
+        this.cd.markForCheck();
+        try {
+            this.companyEquipments = await this.companyEquipmentsService.listByCompany(this.data.id);
+        } finally {
+            this.companyEquipmentsLoading = false;
             this.cd.markForCheck();
         }
     }
@@ -443,6 +494,30 @@ export class CompanyDialogComponent implements OnInit, OnDestroy {
         }
     }
 
+    async onEquipmentSelected(equip: Equipment) {
+        if (!this.data?.id) {
+            this.snack.open('Salve a empresa antes de vincular EPIs.', 'OK', { duration: 3000 });
+            this.equipmentCtrl.setValue('');
+            return;
+        }
+
+        // Verifica se já existe
+        if (this.companyEquipments.some(e => e.sourceEquipmentId === equip.id)) {
+            this.snack.open('Este EPI já está vinculado à empresa.', 'OK', { duration: 3000 });
+            this.equipmentCtrl.setValue('');
+            return;
+        }
+
+        try {
+            await this.companyEquipmentsService.createFromGeneric(this.data.id, equip);
+            this.snack.open('EPI vinculado com sucesso!', 'OK', { duration: 2000 });
+            this.equipmentCtrl.setValue('');
+            await this.loadCompanyEquipments();
+        } catch (e) {
+            this.snack.open('Erro ao vincular EPI.', 'OK', { duration: 3000 });
+        }
+    }
+
     editCompanyCargo(cc: CompanyCargo) {
         const ref = this.dialog.open(CargoDialogComponent, { width: '600px', data: { ...cc }, disableClose: true });
         ref.afterClosed().subscribe(async (res) => {
@@ -470,6 +545,21 @@ export class CompanyDialogComponent implements OnInit, OnDestroy {
             } catch (e) {
                 console.error('Erro ao atualizar risco:', e);
                 this.snack.open('Erro ao atualizar risco.', 'OK', { duration: 3000 });
+            }
+        });
+    }
+
+    editCompanyEquipment(ce: CompanyEquipment) {
+        const ref = this.dialog.open(EquipmentDialogComponent, { width: '700px', data: { ...ce }, disableClose: true });
+        ref.afterClosed().subscribe(async (res) => {
+            if (!res) return;
+            try {
+                await this.companyEquipmentsService.updateEquipment(ce.id, res);
+                this.snack.open('EPI atualizado!', 'OK', { duration: 2000 });
+                await this.loadCompanyEquipments();
+            } catch (e) {
+                console.error('Erro ao atualizar EPI:', e);
+                this.snack.open('Erro ao atualizar EPI.', 'OK', { duration: 3000 });
             }
         });
     }
@@ -525,6 +615,19 @@ export class CompanyDialogComponent implements OnInit, OnDestroy {
          } catch (e) {
              console.error('Erro ao remover risco:', e);
              this.snack.open('Erro ao remover risco.', 'OK', { duration: 3000 });
+         }
+     }
+
+     async removeCompanyEquipment(ce: CompanyEquipment) {
+        if (!confirm(`Tem certeza que deseja remover o EPI "${ce.name}" desta empresa?`)) return;
+
+        try {
+            await this.companyEquipmentsService.deleteEquipment(ce.id);
+            this.snack.open('EPI removido!', 'OK', { duration: 2000 });
+            await this.loadCompanyEquipments();
+         } catch (e) {
+             console.error('Erro ao remover EPI:', e);
+             this.snack.open('Erro ao remover EPI.', 'OK', { duration: 3000 });
          }
      }
 

@@ -58,10 +58,15 @@ export class CadastrosComponent implements AfterViewInit {
   private readonly cdr = inject(ChangeDetectorRef);
 
   constructor() {
-    // Escutar mudanças no escopo admin para atualizar a visibilidade das abas
+    // Escutar mudanças no escopo admin para atualizar a visibilidade das abas e recarregar dados
     effect(() => {
       this.session.adminScopeCompanyId();
       this.cdr.markForCheck();
+      
+      // Forçar recarregamento da aba atual quando o escopo mudar
+      if (this.tabGroup && this.tabGroup.selectedIndex !== null) {
+        this.onTabChange(this.tabGroup.selectedIndex);
+      }
     });
   }
 
@@ -82,17 +87,14 @@ export class CadastrosComponent implements AfterViewInit {
     const isCliente = this.session.hasRole(['CLIENTE'] as any);
     const isGlobal = !this.session.adminScopeCompanyId();
 
-    // ADMIN: acesso total se global, restrito se tiver empresa selecionada
+    // ADMIN: acesso total
     if (isAdmin) {
-      if (tab === 'EPIS') {
-        return isGlobal;
-      }
       return true;
     }
 
     // CLIENTE: acesso somente dentro de Cadastros (Empresas, Unidades, Setores, Funcionários, Cargos)
     if (isCliente) {
-      return tab === 'EMPRESAS' || tab === 'UNIDADES' || tab === 'SETORES' || tab === 'FUNCIONARIOS' || tab === 'CARGOS' || tab === 'RISCOS';
+      return tab === 'EMPRESAS' || tab === 'UNIDADES' || tab === 'SETORES' || tab === 'FUNCIONARIOS' || tab === 'CARGOS' || tab === 'RISCOS' || tab === 'EPIS';
     }
 
     // Outros perfis (ex.: CONSULTOR) ficam sem acesso por este novo requisito

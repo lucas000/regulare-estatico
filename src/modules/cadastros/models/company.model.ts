@@ -53,6 +53,7 @@ export interface Company {
 
   // Endereço
   addressStreet: string;
+  addressNumber?: string;
   addressComplement?: string;
   addressZipCode?: string;
   addressUf: string;

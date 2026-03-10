@@ -32,7 +32,7 @@ function toUpperSafe(v: any): string {
     <div class="dialog-header">
       <h2 mat-dialog-title>EPI / EPC</h2>
       <button 
-        *ngIf="isEdit" 
+        *ngIf="isEdit && !isDeliveryContext" 
         mat-icon-button 
         class="audit-btn"
         matTooltip="Histórico de alterações"
@@ -193,6 +193,7 @@ export class EquipmentDialogComponent {
   private readonly fb = inject(FormBuilder);
   private readonly cd = inject(ChangeDetectorRef);
   private readonly auditDialog = inject(MatDialog);
+  isDeliveryContext = false;
 
   submitted = false;
   isEdit = false;
@@ -216,6 +217,7 @@ export class EquipmentDialogComponent {
 
   constructor() {
     if (this.data) {
+      this.isDeliveryContext = !!this.data._deliveryContext;
       const patch: any = { ...this.data };
       // validUntil já é string dd/MM/aaaa - não converter
       this.form.patchValue(patch);

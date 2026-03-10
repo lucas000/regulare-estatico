@@ -1,4 +1,5 @@
 import { Injectable } from '@angular/core';
+import { Subject } from 'rxjs';
 import { CompaniesRepository } from '../repositories/companies.repository';
 import { Company, AuditUser, CompanyCnae } from '../models/company.model';
 import { SessionService } from '../../../core/services/session.service';
@@ -44,6 +45,9 @@ function normalizeCnaeArray(input: any): CompanyCnae[] {
 
 @Injectable({ providedIn: 'root' })
 export class CompaniesService {
+  private readonly companyCreatedSource = new Subject<void>();
+  companyCreated$ = this.companyCreatedSource.asObservable();
+
   constructor(
     private readonly repo: CompaniesRepository,
     private readonly session: SessionService,
@@ -77,53 +81,58 @@ export class CompaniesService {
   /**
    * Create company and a CLIENTE user in Firebase Auth + /users in a safe, rollback-capable flow.
    */
-  async createCompanyWithClientUser(input: Partial<Company> & { email: string; password?: string }): Promise<string> {
-    // CLIENTE não pode criar empresas
-    if (!this.isAdmin()) {
-      throw new Error('Apenas ADMIN pode criar novas empresas.');
-    }
+    async createCompanyWithClientUser(input: Partial<Company> & { email: string; password?: string }): Promise<string> {
+        // CLIENTE não pode criar empresas
+        if (!this.isAdmin()) {
+            throw new Error('Apenas ADMIN pode criar novas empresas.');
+        }
 
-    if (!input.email) throw new Error('Email obrigatório para criar usuário CLIENTE');
+        if (!input.email) throw new Error('Email obrigatório para criar usuário CLIENTE');
 
-    const now = new Date().toISOString();
-    const id = `comp_${makeId()}`;
+        const now = new Date().toISOString();
+        const id = `comp_${makeId()}`;
 
-    const loggedUid = this.getUid();
-    const loggedUser = await this.usersRepo.get(loggedUid);
-    const createdBy = { uid: loggedUid, name: loggedUser?.name ?? '', email: loggedUser?.email ?? '' };
+        const loggedUid = this.getUid();
+        const loggedUser = await this.usersRepo.get(loggedUid);
+        const createdBy = {uid: loggedUid, name: loggedUser?.name ?? '', email: loggedUser?.email ?? ''};
 
-    const company: Company = {
-      id,
-      status: 'ativo',
-      email: input.email,
-      createdAt: now,
-      updatedAt: now,
-      createdBy,
+        const company: Company = {
+            id,
+            status: 'ativo',
+            email: input.email,
+            createdAt: now,
+            updatedAt: now,
+            createdBy,
 
-      // New required fields
-      razaoSocial: input.razaoSocial ?? input.name ?? '',
-      nomeFantasia: input.nomeFantasia ?? '',
-      personType: (input.personType as any) ?? 'PJ',
-      document: input.document ?? input.cnpj ?? '',
-      caepf: input.caepf,
-      cno: input.cno,
-      legalResponsibleName: input.legalResponsibleName ?? '',
-      legalResponsibleCpf: input.legalResponsibleCpf ?? '',
-      addressStreet: input.addressStreet ?? '',
-      addressUf: input.addressUf ?? '',
-      addressCity: input.addressCity ?? '',
-      companyType: (input.companyType as any) ?? 'Outro',
-      cnaeMain: normalizeCnae((input as any).cnaeMain),
-      cnaeSecondary: normalizeCnaeArray((input as any).cnaeSecondary),
-      workEnvironmentDescription: input.workEnvironmentDescription ?? '',
-      institutionalEmail: input.institutionalEmail ?? input.email,
-      phoneWhatsapp: input.phoneWhatsapp ?? '',
-      notes: input.notes,
+            // New required fields
+            razaoSocial: input.razaoSocial ?? input.name ?? '',
+            nomeFantasia: input.nomeFantasia ?? '',
+            personType: (input.personType as any) ?? 'PJ',
+            document: input.document ?? input.cnpj ?? '',
+            caepf: input.caepf ?? '',
+            cno: input.cno ?? '',
+            legalResponsibleName: input.legalResponsibleName ?? '',
+            legalResponsibleCpf: input.legalResponsibleCpf ?? '',
+            addressStreet: input.addressStreet ?? '',
+            addressNumber: input.addressNumber ?? '',
+            addressComplement: input.addressComplement ?? '',
+            addressZipCode: input.addressZipCode ?? '',
+            addressUf: input.addressUf ?? '',
+            addressCity: input.addressCity ?? '',
+            latitude: input.latitude ?? '',
+            longitude: input.longitude ?? '',
+            companyType: (input.companyType as any) ?? 'Outro',
+            cnaeMain: normalizeCnae((input as any).cnaeMain),
+            cnaeSecondary: normalizeCnaeArray((input as any).cnaeSecondary),
+            workEnvironmentDescription: input.workEnvironmentDescription ?? '',
+            institutionalEmail: input.institutionalEmail ?? input.email,
+            phoneWhatsapp: input.phoneWhatsapp ?? '',
+            notes: input.notes,
 
-      // Legacy fields
-      name: input.name ?? input.razaoSocial ?? '',
-      cnpj: input.cnpj ?? input.document ?? '',
-    };
+            // Legacy fields
+            name: input.name ?? input.razaoSocial ?? '',
+            cnpj: input.cnpj ?? input.document ?? '',
+        };
 
     // Create Auth user using a temporary secondary app to avoid touching current session
     const tempAppName = `temp-${makeId()}`;
@@ -153,6 +162,7 @@ export class CompaniesService {
 
       // Persist company document
       await this.repo.create(company);
+      this.companyCreatedSource.next();
 
       return id;
     } catch (err) {
@@ -180,49 +190,55 @@ export class CompaniesService {
     }
   }
 
-  async createCompany(input: Partial<Company>): Promise<string> {
-    if (!this.isAdmin()) {
-      throw new Error('Apenas ADMIN pode criar novas empresas.');
-    }
+    async createCompany(input: Partial<Company>): Promise<string> {
+        if (!this.isAdmin()) {
+            throw new Error('Apenas ADMIN pode criar novas empresas.');
+        }
 
-    const uid = this.getUid();
-    const user = await this.usersRepo.get(uid);
-    const audit: AuditUser = { uid, name: user?.name ?? '', email: user?.email ?? '' };
-    const now = new Date().toISOString();
-    const id = `comp_${makeId()}`;
+        const uid = this.getUid();
+        const user = await this.usersRepo.get(uid);
+        const audit: AuditUser = {uid, name: user?.name ?? '', email: user?.email ?? ''};
+        const now = new Date().toISOString();
+        const id = `comp_${makeId()}`;
 
-    const doc: Company = {
-      id,
-      status: 'ativo',
-      email: input.email ?? '',
-      createdAt: now,
-      updatedAt: now,
-      createdBy: audit,
+        const doc: Company = {
+            id,
+            status: 'ativo',
+            email: input.email ?? '',
+            createdAt: now,
+            updatedAt: now,
+            createdBy: audit,
 
-      razaoSocial: input.razaoSocial ?? input.name ?? '',
-      nomeFantasia: input.nomeFantasia ?? '',
-      personType: (input.personType as any) ?? 'PJ',
-      document: input.document ?? input.cnpj ?? '',
-      caepf: input.caepf,
-      cno: input.cno,
-      legalResponsibleName: input.legalResponsibleName ?? '',
-      legalResponsibleCpf: input.legalResponsibleCpf ?? '',
-      addressStreet: input.addressStreet ?? '',
-      addressUf: input.addressUf ?? '',
-      addressCity: input.addressCity ?? '',
-      companyType: (input.companyType as any) ?? 'Outro',
-      cnaeMain: normalizeCnae((input as any).cnaeMain),
-      cnaeSecondary: normalizeCnaeArray((input as any).cnaeSecondary),
-      workEnvironmentDescription: input.workEnvironmentDescription ?? '',
-      institutionalEmail: input.institutionalEmail ?? input.email ?? '',
-      phoneWhatsapp: input.phoneWhatsapp ?? '',
-      notes: input.notes,
+            razaoSocial: input.razaoSocial ?? input.name ?? '',
+            nomeFantasia: input.nomeFantasia ?? '',
+            personType: (input.personType as any) ?? 'PJ',
+            document: input.document ?? input.cnpj ?? '',
+            caepf: input.caepf ?? '',
+            cno: input.cno ?? '',
+            legalResponsibleName: input.legalResponsibleName ?? '',
+            legalResponsibleCpf: input.legalResponsibleCpf ?? '',
+            addressStreet: input.addressStreet ?? '',
+            addressNumber: input.addressNumber ?? '',
+            addressComplement: input.addressComplement ?? '',
+            addressZipCode: input.addressZipCode ?? '',
+            addressUf: input.addressUf ?? '',
+            addressCity: input.addressCity ?? '',
+            latitude: input.latitude ?? '',
+            longitude: input.longitude ?? '',
+            companyType: (input.companyType as any) ?? 'Outro',
+            cnaeMain: normalizeCnae((input as any).cnaeMain),
+            cnaeSecondary: normalizeCnaeArray((input as any).cnaeSecondary),
+            workEnvironmentDescription: input.workEnvironmentDescription ?? '',
+            institutionalEmail: input.institutionalEmail ?? input.email ?? '',
+            phoneWhatsapp: input.phoneWhatsapp ?? '',
+            notes: input.notes,
 
-      name: input.name ?? input.razaoSocial ?? '',
-      cnpj: input.cnpj ?? input.document ?? '',
-    };
+            name: input.name ?? input.razaoSocial ?? '',
+            cnpj: input.cnpj ?? input.document ?? '',
+        };
 
     await this.repo.create(doc);
+    this.companyCreatedSource.next();
     return id;
   }
 
@@ -259,6 +275,7 @@ export class CompaniesService {
     if (safePatch.document && !safePatch.cnpj) safePatch.cnpj = safePatch.document;
 
     await this.repo.updateCompany(id, safePatch);
+    this.companyCreatedSource.next();
   }
 
   async setActive(id: string, ativo: boolean): Promise<void> {
@@ -267,6 +284,7 @@ export class CompaniesService {
       throw new Error('Apenas ADMIN pode ativar/inativar empresas.');
     }
     await this.repo.updateCompany(id, { status: ativo ? 'ativo' : 'inativo' });
+    this.companyCreatedSource.next();
   }
 
   async listCompaniesPaged(term: string, pageSize: number, startAfterDoc?: any) {

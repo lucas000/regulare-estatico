@@ -14,7 +14,7 @@
             </mat-form-field>
         </div>
 
-        <div class="actions">
+        <div class="actions" *ngIf="!isCliente && !hasAdminScope">
             <button mat-flat-button color="primary" (click)="newEquipment()">Novo Equipamento</button>
         </div>
     </div>

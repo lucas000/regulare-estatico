@@ -1,0 +1,98 @@
+.delivery-dialog {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 600px;
+  max-width: 900px;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.full {
+  width: 100%;
+}
+
+.section {
+  margin-top: 16px;
+  border-top: 1px solid #eee;
+  padding-top: 8px;
+}
+
+.section-title {
+  font-size: 14px;
+  font-weight: 500;
+  color: #1565c0;
+  margin-bottom: 8px;
+}
+
+.employee-info {
+  background: #f5f5f5;
+  padding: 12px;
+  border-radius: 4px;
+  margin: 8px 0;
+}
+
+.risks-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 8px;
+}
+
+.equipments-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.equip-btn {
+  font-size: 12px;
+  height: 32px;
+  line-height: 30px;
+}
+
+.delivery-table {
+  width: 100%;
+  margin-top: 8px;
+  border: 1px solid #eee;
+  border-radius: 4px;
+
+  th { background: #fafafa; }
+}
+
+.qtd-input {
+  width: 50px;
+  padding: 4px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+
+.date-input {
+  padding: 4px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+
+.empty-msg {
+  color: #999;
+  font-style: italic;
+  font-size: 13px;
+}
+
+.actions-files {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+@media (max-width: 600px) {
+  .grid {
+    grid-template-columns: 1fr;
+  }
+  .delivery-dialog {
+    min-width: 100%;
+  }
+}

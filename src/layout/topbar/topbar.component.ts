@@ -13,6 +13,7 @@ import { Subscription, Observable, merge, of } from 'rxjs';
 import { MatBadgeModule } from '@angular/material/badge';
 import { FormsModule } from '@angular/forms';
 import { CompaniesRepository } from '../../modules/cadastros/repositories/companies.repository';
+import { CompaniesService } from '../../modules/cadastros/services/companies.service';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 
@@ -30,6 +31,7 @@ export class TopbarComponent implements OnDestroy, OnInit {
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
   private readonly companiesRepo = inject(CompaniesRepository);
+  private readonly companiesService = inject(CompaniesService);
   private readonly snackBar = inject(MatSnackBar);
 
   title$: Observable<string>;
@@ -65,6 +67,13 @@ export class TopbarComponent implements OnDestroy, OnInit {
 
     // subscribe once to keep alive
     this.sub = this.title$.subscribe();
+
+    // Recarrega empresas quando uma nova for criada
+    this.sub.add(this.companiesService.companyCreated$.subscribe(() => {
+      console.log('[Topbar] Nova empresa detectada, recarregando lista...');
+      this._loadedCompanies = false; // Permite recarregar
+      this.loadCompaniesForAdmin();
+    }));
 
     // Effect DEVE ser criado no constructor (injection context)
     // Carrega empresas APENAS quando o session terminar de carregar e o usuário for ADMIN

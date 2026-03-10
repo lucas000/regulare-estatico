@@ -85,6 +85,11 @@
       <input matInput formControlName="addressStreet" />
       <mat-error *ngIf="form.get('addressStreet')?.touched && form.get('addressStreet')?.invalid">Obrigatório</mat-error>
     </mat-form-field>
+    
+    <mat-form-field appearance="fill">
+      <mat-label>Número</mat-label>
+      <input matInput formControlName="addressNumber" />
+    </mat-form-field>
 
     <mat-form-field appearance="fill">
       <mat-label>Complemento</mat-label>
@@ -260,7 +265,7 @@
     </mat-dialog-content>
   </mat-tab>
 
-  <mat-tab label="Cargos da Empresa" *ngIf="isEdit">
+  <mat-tab label="Cargos" *ngIf="isEdit">
     <mat-dialog-content class="company-dialog">
       <div style="margin-top: 16px;">
         <mat-form-field appearance="fill" style="width: 100%;">
@@ -317,7 +322,7 @@
     </mat-dialog-content>
   </mat-tab>
 
-  <mat-tab label="Riscos da Empresa" *ngIf="isEdit">
+  <mat-tab label="Riscos" *ngIf="isEdit">
     <mat-dialog-content class="company-dialog">
       <div style="margin-top: 16px;">
         <mat-form-field appearance="fill" style="width: 100%;">
@@ -380,6 +385,76 @@
         </div>
         <div *ngIf="companyRisksLoading" style="text-align: center; padding: 32px;">
           Carregando riscos...
+        </div>
+      </div>
+    </mat-dialog-content>
+  </mat-tab>
+
+  <mat-tab label="EPIs / EPCs" *ngIf="isEdit">
+    <mat-dialog-content class="company-dialog">
+      <div style="margin-top: 16px;">
+        <mat-form-field appearance="fill" style="width: 100%;">
+          <mat-label>Adicionar a partir de EPIs / EPCs genéricos</mat-label>
+          <input type="text" matInput [formControl]="equipmentCtrl" [matAutocomplete]="autoEquip"
+                 placeholder="Digite o nome do EPIs / EPCs para buscar" />
+          <mat-autocomplete #autoEquip="matAutocomplete" (optionSelected)="onEquipmentSelected($event.option.value)">
+            <mat-option *ngFor="let e of (equipments$ | async)" [value]="e">
+              {{ e.name }} — {{ e.type }}
+            </mat-option>
+            <mat-option *ngIf="loadingEquipments" disabled>Carregando...</mat-option>
+          </mat-autocomplete>
+          <mat-hint>Ao selecionar, uma cópia será criada para esta empresa.</mat-hint>
+        </mat-form-field>
+      </div>
+
+      <div class="company-equipments-list" style="margin-top: 24px;">
+        <h3 class="section-title">EPIs Vinculados</h3>
+        <table mat-table [dataSource]="companyEquipments" style="width: 100%;" *ngIf="companyEquipments.length > 0">
+          <ng-container matColumnDef="name">
+            <th mat-header-cell *matHeaderCellDef [style.width.%]="40">Nome</th>
+            <td mat-cell *matCellDef="let e">{{ e.name }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="type">
+            <th mat-header-cell *matHeaderCellDef [style.width.%]="15">Tipo</th>
+            <td mat-cell *matCellDef="let e">{{ e.type }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="certification">
+            <th mat-header-cell *matHeaderCellDef [style.width.%]="20">CA / Norma</th>
+            <td mat-cell *matCellDef="let e">{{ e.hasCertification ? e.certificationNumber : 'N/A' }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="status">
+            <th mat-header-cell *matHeaderCellDef [style.width.%]="15">Status</th>
+            <td mat-cell *matCellDef="let e">
+              <span class="status-badge" [ngClass]="e.status === 'ativo' ? 'active' : 'inactive'">
+                {{ e.status === 'ativo' ? 'Ativo' : 'Inativo' }}
+              </span>
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="actions">
+            <th mat-header-cell *matHeaderCellDef [style.width.%]="10">Ações</th>
+            <td mat-cell *matCellDef="let e">
+              <button mat-icon-button color="primary" (click)="editCompanyEquipment(e)" matTooltip="Editar EPI">
+                <mat-icon>edit</mat-icon>
+              </button>
+              <button mat-icon-button color="warn" (click)="removeCompanyEquipment(e)" matTooltip="Remover vínculo">
+                <mat-icon>delete</mat-icon>
+              </button>
+            </td>
+          </ng-container>
+
+          <tr mat-header-row *matHeaderRowDef="['name','type','certification','status','actions']"></tr>
+          <tr mat-row *matRowDef="let row; columns: ['name','type','certification','status','actions'];"></tr>
+        </table>
+
+        <div *ngIf="companyEquipments.length === 0 && !companyEquipmentsLoading" style="text-align: center; padding: 32px; color: #666;">
+          Nenhum EPI vinculado a esta empresa.
+        </div>
+        <div *ngIf="companyEquipmentsLoading" style="text-align: center; padding: 32px;">
+          Carregando EPIs...
         </div>
       </div>
     </mat-dialog-content>

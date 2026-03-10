@@ -1,0 +1,153 @@
+<div class="dialog-header">
+  <h2 mat-dialog-title>{{ isEdit ? 'Editar Entrega de EPI' : 'Nova Entrega de EPI' }}</h2>
+</div>
+
+<mat-dialog-content [formGroup]="form" class="delivery-dialog">
+  <!-- Localização -->
+  <div class="grid">
+    <mat-form-field appearance="fill">
+      <mat-label>Empresa</mat-label>
+      <mat-select formControlName="companyId" [disabled]="isCliente">
+        <mat-option *ngFor="let c of companies" [value]="c.id">{{ c.razaoSocial || c.name }}</mat-option>
+      </mat-select>
+      <mat-error *ngIf="form.get('companyId')?.invalid">Obrigatório</mat-error>
+    </mat-form-field>
+
+    <mat-form-field appearance="fill">
+      <mat-label>Unidade</mat-label>
+      <mat-select formControlName="unitId" [disabled]="!form.get('companyId')?.value">
+        <mat-option *ngIf="unitsLoading" disabled>Carregando...</mat-option>
+        <mat-option *ngFor="let u of units" [value]="u.id">{{ u.name }}</mat-option>
+      </mat-select>
+      <mat-error *ngIf="form.get('unitId')?.invalid">Obrigatório</mat-error>
+    </mat-form-field>
+  </div>
+
+  <div class="grid">
+    <mat-form-field appearance="fill">
+      <mat-label>Setor</mat-label>
+      <mat-select formControlName="sectorId" [disabled]="!form.get('unitId')?.value">
+        <mat-option *ngIf="sectorsLoading" disabled>Carregando...</mat-option>
+        <mat-option *ngFor="let s of sectors" [value]="s.id">{{ s.name }}</mat-option>
+      </mat-select>
+      <mat-error *ngIf="form.get('sectorId')?.invalid">Obrigatório</mat-error>
+    </mat-form-field>
+
+    <mat-form-field appearance="fill">
+      <mat-label>Funcionário</mat-label>
+      <mat-select formControlName="employeeId" [disabled]="!form.get('sectorId')?.value">
+        <mat-option *ngIf="employeesLoading" disabled>Carregando...</mat-option>
+        <mat-option *ngFor="let e of employees" [value]="e.id">{{ e.name }}</mat-option>
+      </mat-select>
+      <mat-error *ngIf="form.get('employeeId')?.invalid">Obrigatório</mat-error>
+    </mat-form-field>
+  </div>
+
+  <!-- Dados do Funcionário Selecionado -->
+  <div class="employee-info" *ngIf="selectedEmployee">
+    <div class="info-row">
+      <strong>Cargo:</strong> {{ selectedEmployee.cargoName }}
+      <strong style="margin-left: 16px;">CBO:</strong> {{ selectedEmployee.cargoCbo }}
+    </div>
+  </div>
+
+  <!-- Riscos Associados -->
+  <div class="section" *ngIf="selectedEmployee">
+    <h3 class="section-title">Riscos Associados</h3>
+    <div class="risks-grid">
+      <div *ngFor="let r of companyRisks" class="risk-item">
+        <mat-checkbox [checked]="isRiskSelected(r.id)" (change)="toggleRisk(r.id)">
+          {{ r.name }}
+        </mat-checkbox>
+      </div>
+      <div *ngIf="companyRisks.length === 0" class="empty-msg">Nenhum risco vinculado à empresa.</div>
+    </div>
+  </div>
+
+  <!-- EPIs Sugeridos -->
+  <div class="section" *ngIf="selectedEmployee">
+    <h3 class="section-title">EPIs Sugeridos</h3>
+    <div class="equipments-chips">
+      <button 
+        *ngFor="let e of suggestedEquipments" 
+        mat-stroked-button 
+        [color]="isEquipmentSelected(e.id) ? 'primary' : ''"
+        (click)="toggleEquipment(e)"
+        class="equip-btn">
+        <mat-icon *ngIf="isEquipmentSelected(e.id)">check</mat-icon>
+        {{ e.name }}
+      </button>
+      <div *ngIf="suggestedEquipments.length === 0" class="empty-msg">Nenhum EPI vinculado à empresa.</div>
+    </div>
+  </div>
+
+  <!-- Lista de Entrega -->
+  <div class="section" *ngIf="deliveryItems.length > 0">
+    <h3 class="section-title">Itens para Entrega</h3>
+    <table mat-table [dataSource]="deliveryItems" class="delivery-table">
+      <ng-container matColumnDef="name">
+        <th mat-header-cell *matHeaderCellDef> Equipamento </th>
+        <td mat-cell *matCellDef="let item"> {{ item.name }} </td>
+      </ng-container>
+
+      <ng-container matColumnDef="ca">
+        <th mat-header-cell *matHeaderCellDef> CA </th>
+        <td mat-cell *matCellDef="let item"> {{ item.certificationNumber || 'N/A' }} </td>
+      </ng-container>
+
+      <ng-container matColumnDef="quantity">
+        <th mat-header-cell *matHeaderCellDef> Qtd </th>
+        <td mat-cell *matCellDef="let item"> 
+          <input type="number" [(ngModel)]="item.quantity" [ngModelOptions]="{standalone: true}" class="qtd-input">
+        </td>
+      </ng-container>
+
+      <ng-container matColumnDef="nextExchange">
+        <th mat-header-cell *matHeaderCellDef> Próx. Troca </th>
+        <td mat-cell *matCellDef="let item"> 
+          <input type="date" [(ngModel)]="item.nextExchangeDate" [ngModelOptions]="{standalone: true}" class="date-input">
+        </td>
+      </ng-container>
+
+      <ng-container matColumnDef="actions">
+        <th mat-header-cell *matHeaderCellDef> Ações </th>
+        <td mat-cell *matCellDef="let item">
+          <button mat-icon-button color="primary" (click)="editItem(item)" matTooltip="Editar detalhes">
+            <mat-icon>edit</mat-icon>
+          </button>
+          <button mat-icon-button color="warn" (click)="removeItem(item.equipmentId)">
+            <mat-icon>delete</mat-icon>
+          </button>
+        </td>
+      </ng-container>
+
+      <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+      <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+    </table>
+  </div>
+
+  <!-- Dados Finais -->
+  <div class="grid" style="margin-top: 24px;">
+    <mat-form-field appearance="fill">
+      <mat-label>Data da Entrega</mat-label>
+      <input matInput type="date" formControlName="deliveryDate">
+    </mat-form-field>
+
+    <div class="actions-files">
+      <button mat-stroked-button (click)="downloadTerm()" [disabled]="!selectedEmployee">
+        <mat-icon>download</mat-icon> Baixar Termo
+      </button>
+    </div>
+  </div>
+
+  <mat-form-field appearance="fill" class="full">
+    <mat-label>Observações</mat-label>
+    <textarea matInput rows="3" formControlName="notes"></textarea>
+  </mat-form-field>
+
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <button mat-button (click)="cancel()">Cancelar</button>
+  <button mat-flat-button color="primary" (click)="save()">Confirmar Entrega</button>
+</mat-dialog-actions>

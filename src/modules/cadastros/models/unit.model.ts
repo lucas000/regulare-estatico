@@ -5,6 +5,7 @@ export type DocumentType = 'CNPJ' | 'CPF' | 'CAEPF' | 'CNO';
 
 export interface UnitAddress {
   street: string;
+  number?: string;
   complement?: string;
   zipCode?: string;
   city: string;
