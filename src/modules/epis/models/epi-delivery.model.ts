@@ -9,23 +9,34 @@ export interface EpiDeliveryItem extends Omit<Equipment, 'id'> {
 
 export interface EpiDelivery {
   id: string;
-  companyId: string;
-  unitId: string;
-  sectorId: string;
   employeeId: string;
   employeeName: string;
+  employeeCpf?: string;
+  employeeAdmissionDate?: string;
+  employeeEsocialRegistration?: string;
   cargoId: string;
   cargoName: string;
   cargoCbo: string;
+  
+  companyId: string;
+  companyCnpj?: string;
+  unitId: string;
+  sectorId: string;
   
   deliveryDate: string; // ISO date string
   items: EpiDeliveryItem[];
   riskIds: string[]; // Riscos marcados no momento da entrega
   
   receiptUrl?: string; // Comprovante opcional
+  receiptName?: string;
   
   createdAt: string;
   updatedAt: string;
   createdBy: AuditUser;
   updatedBy?: AuditUser;
+
+  // Exclusão lógica (soft delete)
+  deleted?: boolean;
+  deletedAt?: string;
+  deletedBy?: AuditUser;
 }

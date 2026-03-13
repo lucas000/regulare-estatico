@@ -24,6 +24,8 @@ export class EpiDeliveriesRepository extends BaseFirestoreService<EpiDelivery> {
       constraints.push(where('employeeId', '==', employeeId));
     }
 
+    constraints.push(where('deleted', '!=', true));
+
     constraints.push(orderBy('deliveryDate', 'desc'));
     constraints.push(limit(pageSize));
 

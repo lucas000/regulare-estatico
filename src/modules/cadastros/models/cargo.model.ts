@@ -8,6 +8,7 @@ export interface Cargo {
   description?: string;
   notes?: string;
   riskIds?: string[];
+  epiIds?: string[];
   status?: 'ativo' | 'inativo';
   createdAt: string;
   updatedAt?: string;

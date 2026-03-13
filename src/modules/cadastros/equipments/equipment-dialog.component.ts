@@ -112,6 +112,23 @@ function toUpperSafe(v: any): string {
             </mat-select>
           </mat-form-field>
         </div>
+
+        <div class="grid">
+          <mat-form-field appearance="fill">
+            <mat-label>Validade CA</mat-label>
+            <input
+              matInput
+              formControlName="validUntil"
+              placeholder="dd/MM/aaaa"
+              inputmode="numeric"
+              autocomplete="off"
+              maxlength="10"
+              [disabled]="form.get('hasCertification')?.value === false"
+              (input)="onValidUntilInput($event)"
+            />
+            <mat-error *ngIf="(submitted || form.get('validUntil')?.touched) && form.get('validUntil')?.hasError('pattern')">Data inválida (use dd/MM/aaaa)</mat-error>
+          </mat-form-field>
+        </div>
       </ng-container>
 
       <!-- Campos específicos para EPC -->
@@ -131,18 +148,8 @@ function toUpperSafe(v: any): string {
 
       <div class="grid">
         <mat-form-field appearance="fill">
-          <mat-label>Validade CA</mat-label>
-          <input
-            matInput
-            formControlName="validUntil"
-            placeholder="dd/MM/aaaa"
-            inputmode="numeric"
-            autocomplete="off"
-            maxlength="10"
-            [disabled]="form.get('hasCertification')?.value === false"
-            (input)="onValidUntilInput($event)"
-          />
-          <mat-error *ngIf="(submitted || form.get('validUntil')?.touched) && form.get('validUntil')?.hasError('pattern')">Data inválida (use dd/MM/aaaa)</mat-error>
+          <mat-label>Nº DA NOTA FISCAL/ANO</mat-label>
+          <input matInput formControlName="invoiceNumber" placeholder="Ex: 1234/2024" />
         </mat-form-field>
 
         <mat-form-field appearance="fill">
@@ -211,6 +218,7 @@ export class EquipmentDialogComponent {
     // Campos EPC
     reportNumber: [''],
     maintenanceCertificateNumber: [''],
+    invoiceNumber: [''],
     notes: [''],
     status: ['ativo', [Validators.required]],
   });
