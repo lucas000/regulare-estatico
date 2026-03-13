@@ -63,6 +63,7 @@ export class EpiDeliveriesService {
       createdAt: now,
       updatedAt: now,
       createdBy: audit,
+      deleted: false,
     };
 
     // Remover campos undefined para não quebrar o Firestore
