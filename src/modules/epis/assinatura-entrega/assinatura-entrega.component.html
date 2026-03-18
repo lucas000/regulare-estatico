@@ -16,8 +16,20 @@
       </div>
 
       <div *ngIf="entrega && !loading" class="delivery-container">
-        <!-- Dados do Funcionário em Grid -->
+        <!-- Dados do Funcionário e Empresa em Grid -->
         <div class="delivery-info-grid">
+          <div class="info-item">
+            <span class="info-label">Empresa</span>
+            <span class="info-value">{{ entrega.companyName || 'N/A' }}</span>
+          </div>
+          <div class="info-item">
+            <span class="info-label">CNPJ</span>
+            <span class="info-value">{{ entrega.companyCnpj || 'N/A' }}</span>
+          </div>
+          <div class="info-item">
+            <span class="info-label">Data da Entrega</span>
+            <span class="info-value">{{ entrega.deliveryDate | date:'dd/MM/yyyy' }}</span>
+          </div>
           <div class="info-item">
             <span class="info-label">Funcionário</span>
             <span class="info-value">{{ entrega.employeeName }}</span>
@@ -25,10 +37,6 @@
           <div class="info-item">
             <span class="info-label">Cargo</span>
             <span class="info-value">{{ entrega.cargoName }}</span>
-          </div>
-          <div class="info-item">
-            <span class="info-label">Data da Entrega</span>
-            <span class="info-value">{{ entrega.deliveryDate | date:'dd/MM/yyyy' }}</span>
           </div>
         </div>
 

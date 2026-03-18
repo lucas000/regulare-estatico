@@ -56,6 +56,8 @@ export class EpiDeliveriesService {
       cargoId: input.cargoId!,
       cargoName: input.cargoName!,
       cargoCbo: input.cargoCbo!,
+      companyName: input.companyName,
+      companyCnpj: input.companyCnpj,
       deliveryDate: input.deliveryDate || now,
       items: input.items || [],
       riskIds: input.riskIds || [],
@@ -97,8 +99,19 @@ export class EpiDeliveriesService {
     return this.repo.listPaged(scoped, employeeId, pageSize, startAfterDoc);
   }
 
+  listenToDeliveriesPaged(employeeId: string | null, pageSize: number, callback: (res: any) => void) {
+    const isAdmin = this.isAdmin();
+    const scoped = isAdmin ? (this.session.adminScopeCompanyId() ?? null) : (this.getLoggedCompanyId() || null);
+
+    return this.repo.listenPaged(scoped, employeeId, pageSize, callback);
+  }
+
   async getDelivery(id: string): Promise<EpiDelivery | null> {
     return this.repo.get(id);
+  }
+
+  listenToDelivery(id: string, callback: (data: EpiDelivery | null) => void) {
+    return this.repo.listen(id, callback);
   }
 
   async deleteDelivery(id: string): Promise<void> {

@@ -18,6 +18,7 @@ import { QRCodeModule } from 'angularx-qrcode';
 import { Subscription, Observable, of, from } from 'rxjs';
 import * as pdfMake from 'pdfmake/build/pdfmake';
 import * as pdfFonts from 'pdfmake/build/vfs_fonts';
+import * as QRCode from 'qrcode';
 
 (pdfMake as any).vfs = (pdfFonts as any).pdfMake ? (pdfFonts as any).pdfMake.vfs : (pdfFonts as any).vfs;
 import { CompaniesService } from '../../cadastros/services/companies.service';
@@ -34,6 +35,8 @@ import { RiskDialogComponent } from '../../cadastros/risks/risk-dialog.component
 import { StorageService } from '../../../core/services/storage.service';
 import { AuditHistoryDialogComponent, AuditHistoryData } from '../../../core/components/audit-history-dialog.component';
 import { ref, getBytes, Storage } from '@angular/fire/storage';
+import { EpiDeliveriesService } from '../services/epi-deliveries.service';
+import { Unsubscribe } from 'firebase/firestore';
 
 @Component({
     selector: 'app-epi-delivery-dialog',
@@ -102,6 +105,7 @@ export class EpiDeliveryDialogComponent implements OnInit, OnDestroy {
     private readonly dialog = inject(MatDialog);
     private readonly storage = inject(StorageService);
     private readonly fireStorage = inject(Storage);
+    private readonly epiDeliveriesService = inject(EpiDeliveriesService);
 
     isCliente = this.session.hasRole(['CLIENTE'] as any);
     displayedColumns: string[] = ['name', 'ca', 'quantity', 'signature', 'actions'];
@@ -200,9 +204,32 @@ export class EpiDeliveryDialogComponent implements OnInit, OnDestroy {
                 this.cd.markForCheck();
             }
         }
+
+        if (this.isEdit && this.data?.id) {
+            this.signatureSub = this.epiDeliveriesService.listenToDelivery(this.data.id, (updated) => {
+                if (updated && updated.signed && !this.form.get('signed')?.value) {
+                    this.form.patchValue({
+                        signed: true,
+                        signatureUrl: updated.signatureUrl,
+                        signatureDate: updated.signatureDate
+                    });
+                    // Também atualizar os dados do objeto local 'data' para o downloadTerm
+                    this.data.signed = true;
+                    this.data.signatureUrl = updated.signatureUrl;
+                    this.data.signatureDate = updated.signatureDate;
+                    
+                    this.cd.markForCheck();
+                    this.snack.open('Assinatura digital detectada!', 'OK', { duration: 3000 });
+                }
+            });
+        }
     }
 
-    ngOnDestroy() {}
+    ngOnDestroy() {
+        if (this.signatureSub) {
+            this.signatureSub();
+        }
+    }
 
     private async loadCompanies() {
         this.companiesLoading = true;
@@ -302,6 +329,7 @@ export class EpiDeliveryDialogComponent implements OnInit, OnDestroy {
 
     private currentCargoEpiIds: string[] = [];
     private currentCargoRiskIds: string[] = [];
+    private signatureSub?: Unsubscribe;
 
     async onEmployeeSelected(employeeId: string) {
         this.selectedEmployee = this.employees.find(e => e.id === employeeId);
@@ -513,13 +541,13 @@ export class EpiDeliveryDialogComponent implements OnInit, OnDestroy {
             cargoId: employeeData?.cargoId,
             cargoName: employeeData?.cargoName,
             cargoCbo: employeeData?.cargoCbo,
+            companyName: company?.razaoSocial || company?.name || this.data?.companyName,
             companyCnpj: company?.document || company?.cnpj || this.data?.companyCnpj,
             riskIds: this.selectedRisksIds,
             items: this.deliveryItems,
             receiptUrl: this.currentFileUrl,
             receiptName: this.data?.receiptName,
-            _fileToUpload: this.selectedFile,
-            deleted: false
+            _fileToUpload: this.selectedFile
         };
 
         this.dialogRef.close(payload);
@@ -585,6 +613,24 @@ export class EpiDeliveryDialogComponent implements OnInit, OnDestroy {
                 console.error('Erro ao converter assinatura para Base64:', error);
                 this.snack.open('Aviso: Erro de segurança (CORS) ao carregar assinatura do Firebase.', 'OK', { duration: 6000 });
                 console.warn('DICA: O bucket do Firebase Storage precisa estar configurado para permitir CORS da origem atual.');
+            }
+        }
+
+        // Geração de QR Code
+        let qrCodeBase64 = null;
+        const signatureLink = this.getSignatureLink();
+        if (signatureLink) {
+            try {
+                qrCodeBase64 = await QRCode.toDataURL(signatureLink, {
+                    width: 150,
+                    margin: 1,
+                    color: {
+                        dark: '#000000',
+                        light: '#ffffff'
+                    }
+                });
+            } catch (err) {
+                console.error('Erro ao gerar QR Code para o PDF:', err);
             }
         }
 
@@ -719,7 +765,6 @@ export class EpiDeliveryDialogComponent implements OnInit, OnDestroy {
                                         { text: 'IDENTIFICAÇÃO E ASSINATURA DO EMPREGADO', bold: true, fontSize: 10, margin: [0, 0, 0, 10] },
                                         {
                                             columns: [
-                                                { text: `Local: ______________________________`, margin: [0, 0, 0, 10] },
                                                 { 
                                                     text: `Data: ${this.data?.signed ? this.formatDateTime(this.data.signatureDate) : '____ / ____ / ______'}`, 
                                                     margin: [0, 0, 0, 10] 
@@ -746,6 +791,40 @@ export class EpiDeliveryDialogComponent implements OnInit, OnDestroy {
                     margin: [0, 0, 0, 15]
                 },
 
+                // --- Seção: Autenticidade Digital (QR Code e Texto Legal) ---
+                this.data?.signed && qrCodeBase64 ? {
+                    columns: [
+                        {
+                            image: 'qrCodeImage',
+                            width: 60,
+                            alignment: 'left'
+                        },
+                        {
+                            stack: [
+                                {
+                                    text: `Documento assinado eletronicamente por ${emp.name || emp.employeeName} em ${this.formatDateTime(this.data.signatureDate)}.`,
+                                    fontSize: 8,
+                                    bold: true,
+                                    margin: [0, 5, 0, 2]
+                                },
+                                {
+                                    text: 'A Lei nº 14.063/2020, de 23 de setembro de 2020.',
+                                    fontSize: 8,
+                                    margin: [0, 0, 0, 2]
+                                },
+                                {
+                                    text: [
+                                        { text: 'Verifique a autenticidade deste documento em: ', fontSize: 8 },
+                                        { text: signatureLink, fontSize: 8, color: '#1565c0', decoration: 'underline' }
+                                    ]
+                                }
+                            ],
+                            margin: [10, 0, 0, 0]
+                        }
+                    ],
+                    margin: [0, 0, 0, 20]
+                } : {},
+
             ],
             footer: (currentPage: number, pageCount: number) => {
                 const creator = this.data?.createdBy?.name || 'Sistema';
@@ -753,7 +832,7 @@ export class EpiDeliveryDialogComponent implements OnInit, OnDestroy {
                 return {
                     stack: [
                         {
-                            text: `Entregue por: ${creator} e data ${deliveryDateStr} | Gerado automaticamente pelo sistema de gestão de EPIs.`,
+                            text: `Entregue por: ${creator} |  Data de entrega: ${deliveryDateStr} | Gerado automaticamente pelo sistema de gestão de EPIs.`,
                             alignment: 'center',
                             fontSize: 8,
                             color: '#666'
@@ -768,9 +847,10 @@ export class EpiDeliveryDialogComponent implements OnInit, OnDestroy {
                     margin: [0, 20, 0, 0]
                 };
             },
-            images: signatureBase64 ? {
-                signatureImage: signatureBase64
-            } : {},
+            images: {
+                ...(signatureBase64 ? { signatureImage: signatureBase64 } : {}),
+                ...(qrCodeBase64 ? { qrCodeImage: qrCodeBase64 } : {})
+            },
             styles: {
                 header: {
                     fontSize: 14,

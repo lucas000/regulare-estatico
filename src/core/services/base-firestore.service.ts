@@ -1,5 +1,5 @@
-import { Firestore, collection, CollectionReference, doc, setDoc, getDoc, deleteDoc, updateDoc, DocumentReference, getDocs, query, where, limit } from '@angular/fire/firestore';
-import { QueryDocumentSnapshot, SnapshotOptions, FirestoreDataConverter } from 'firebase/firestore';
+import { Firestore, collection, CollectionReference, doc, setDoc, getDoc, deleteDoc, updateDoc, DocumentReference, getDocs, query, where, limit, onSnapshot } from '@angular/fire/firestore';
+import { QueryDocumentSnapshot, SnapshotOptions, FirestoreDataConverter, Unsubscribe } from 'firebase/firestore';
 import { inject } from '@angular/core';
 
 export abstract class BaseFirestoreService<T extends { id: string }> {
@@ -45,5 +45,11 @@ export abstract class BaseFirestoreService<T extends { id: string }> {
     const q = query(this.colRef(), where(field as string, '==', value), limit(max));
     const sn = await getDocs(q);
     return sn.docs.map(d => d.data() as T);
+  }
+
+  listen(id: string, callback: (data: T | null) => void): Unsubscribe {
+    return onSnapshot(this.docRef(id), (snap) => {
+      callback(snap.exists() ? (snap.data() as T) : null);
+    });
   }
 }

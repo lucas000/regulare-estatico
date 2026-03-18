@@ -19,6 +19,7 @@ export interface EpiDelivery {
   cargoCbo: string;
   
   companyId: string;
+  companyName?: string;
   companyCnpj?: string;
   unitId: string;
   sectorId: string;

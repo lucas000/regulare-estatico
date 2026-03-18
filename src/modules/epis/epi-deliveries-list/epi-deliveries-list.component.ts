@@ -12,6 +12,7 @@ import { MatPaginator, PageEvent, MatPaginatorModule } from '@angular/material/p
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { debounceTime, distinctUntilChanged } from 'rxjs/operators';
 import { Subscription } from 'rxjs';
+import { Unsubscribe } from 'firebase/firestore';
 import { EpiDeliveriesService } from '../services/epi-deliveries.service';
 import { EpiDelivery } from '../models/epi-delivery.model';
 import { EpiDeliveryDialogComponent } from '../epi-delivery-dialog/epi-delivery-dialog.component';
@@ -60,6 +61,7 @@ export class EpiDeliveriesListComponent implements OnInit, OnDestroy {
   
   searchControl = new FormControl('');
   private subs = new Subscription();
+  private listSub?: Unsubscribe;
   private _reqId = 0;
 
   @ViewChild(MatPaginator) paginator?: MatPaginator;
@@ -75,6 +77,7 @@ export class EpiDeliveriesListComponent implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     this.subs.unsubscribe();
+    if (this.listSub) this.listSub();
   }
 
   async loadPage(index = 0, reset = false) {
@@ -89,6 +92,25 @@ export class EpiDeliveriesListComponent implements OnInit, OnDestroy {
     this.cd.markForCheck();
 
     try {
+      if (this.listSub) this.listSub();
+
+      // Se for a primeira página (index 0), podemos usar o listener para tempo real
+      if (index === 0 && !this.searchControl.value) {
+        this.listSub = this.service.listenToDeliveriesPaged(null, this.pageSize, (res) => {
+          if (reqId !== this._reqId) return;
+          this.dataSource.data = res.docs;
+          this.cursors[0] = res.lastDoc;
+          this.hasMore = res.docs.length === this.pageSize;
+          this.total = (this.pageIndex + (this.hasMore ? 2 : 1)) * this.pageSize;
+          if (this.paginator) {
+            this.paginator.length = this.total;
+          }
+          this.loading = false;
+          this.cd.markForCheck();
+        });
+        return;
+      }
+
       const startAfterDoc = index > 0 ? this.cursors[index - 1] : undefined;
       // Por enquanto a busca por termo não está implementada no repo de entregas, 
       // mas deixamos a estrutura pronta.

@@ -140,12 +140,6 @@
       <mat-label>Data da Entrega</mat-label>
       <input matInput type="date" formControlName="deliveryDate">
     </mat-form-field>
-
-    <div class="actions-files">
-      <button mat-stroked-button (click)="downloadTerm()" [disabled]="!selectedEmployee">
-        <mat-icon>download</mat-icon> Baixar Termo
-      </button>
-    </div>
   </div>
 
   <!-- Upload do Termo Assinado -->
@@ -211,6 +205,10 @@
         <button mat-flat-button color="accent" (click)="fileInput.click()" [disabled]="uploadingFile">
           <mat-icon>upload_file</mat-icon>
           {{ (currentFileUrl || selectedFileName) ? 'Alterar Arquivo' : 'Selecionar Termo Assinado' }}
+        </button>
+
+        <button mat-stroked-button (click)="downloadTerm()" [disabled]="!selectedEmployee && !data">
+            <mat-icon>download</mat-icon> Baixar Termo
         </button>
 
         <span class="file-info" *ngIf="selectedFileName">
