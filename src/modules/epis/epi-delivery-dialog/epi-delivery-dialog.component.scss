@@ -38,16 +38,17 @@
 
 .section-title {
   font-size: 14px;
-  font-weight: 500;
-  color: #1565c0;
+  font-weight: 600;
+  color: #0d47a1;
   margin-bottom: 8px;
 }
 
 .employee-info {
-  background: #f5f5f5;
+  background: #eeeeee;
   padding: 12px;
   border-radius: 4px;
   margin: 8px 0;
+  color: #000;
 }
 
 .risks-grid {
@@ -71,10 +72,15 @@
 .delivery-table {
   width: 100%;
   margin-top: 8px;
-  border: 1px solid #eee;
+  border: 1px solid #ccc;
   border-radius: 4px;
+  color: #333;
 
-  th { background: #fafafa; }
+  th { 
+    background: #e0e0e0;
+    color: #000;
+    font-weight: 600;
+  }
 }
 
 .qtd-input {
@@ -100,6 +106,158 @@
   display: flex;
   align-items: center;
   gap: 12px;
+}
+
+.signature-link-card {
+  background: #ffffff;
+  border: 1px solid #e0e0e0;
+  border-left: 4px solid #1565c0;
+  border-radius: 8px;
+  margin-bottom: 24px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+  overflow: hidden;
+
+  .card-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 16px;
+    background: #f8f9fa;
+    border-bottom: 1px solid #f1f1f1;
+
+    mat-icon { font-size: 20px; width: 20px; height: 20px; }
+    .card-title { margin: 0; font-size: 14px; font-weight: 600; color: #1565c0; }
+  }
+
+  .card-body {
+    padding: 16px;
+
+    .signature-flex-container {
+      display: flex;
+      gap: 24px;
+      align-items: center;
+
+      .qr-code-section {
+        flex-shrink: 0;
+        
+        .qr-container {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          background: #fff;
+          padding: 8px;
+          border: 1px solid #e0e0e0;
+          border-radius: 8px;
+
+          .qr-hint {
+            margin: 4px 0 0 0;
+            font-size: 11px;
+            color: #666;
+            font-weight: 500;
+            text-transform: uppercase;
+          }
+        }
+      }
+
+      .link-info-section {
+        flex: 1;
+      }
+    }
+
+    .card-description {
+      margin: 0 0 12px 0;
+      font-size: 13px;
+      color: #666;
+    }
+  }
+
+  .link-field-group {
+    display: flex;
+    gap: 8px;
+    align-items: stretch;
+    margin-bottom: 8px;
+
+    .link-input-wrapper {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      background: #f1f3f4;
+      border: 1px solid #e0e0e0;
+      border-radius: 4px;
+      padding-left: 12px;
+      transition: border-color 0.2s;
+
+      &:hover { border-color: #bdbdbd; }
+
+      .readonly-link-input {
+        flex: 1;
+        border: none;
+        background: transparent;
+        font-family: monospace;
+        font-size: 13px;
+        color: #444;
+        padding: 8px 0;
+        outline: none;
+        cursor: default;
+      }
+
+      .copy-btn {
+        color: #1565c0;
+        margin-right: 4px;
+      }
+    }
+
+    .open-btn {
+      height: auto;
+      min-width: 140px;
+    }
+  }
+
+  .signed-badge {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px dashed #e0e0e0;
+
+    .badge-content {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      color: #2e7d32;
+      font-weight: 500;
+      font-size: 13px;
+
+      mat-icon { font-size: 18px; width: 18px; height: 18px; }
+    }
+
+    .view-sig-link {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      text-decoration: none;
+      color: #1565c0;
+      font-weight: 500;
+      font-size: 13px;
+
+      &:hover { text-decoration: underline; }
+      mat-icon { font-size: 16px; width: 16px; height: 16px; }
+    }
+  }
+}
+
+@media (max-width: 600px) {
+  .signature-link-card .card-body .signature-flex-container {
+    flex-direction: column;
+    text-align: center;
+    .qr-code-section { margin-bottom: 16px; }
+  }
+
+  .signature-link-card .link-field-group {
+    flex-direction: column;
+    .open-btn { width: 100%; }
+  }
 }
 
 .upload-container {

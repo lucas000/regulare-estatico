@@ -151,7 +151,59 @@
   <!-- Upload do Termo Assinado -->
   <div class="section" *ngIf="isEdit || deliveryItems.length > 0">
     <mat-divider style="margin-bottom: 16px;"></mat-divider>
-    <h3 class="section-title">Termo de Entrega Assinado</h3>
+    
+    <div class="signature-link-card" *ngIf="isEdit && data?.id">
+      <div class="card-header">
+        <mat-icon color="primary">link</mat-icon>
+        <h3 class="card-title">Link para Assinatura Digital</h3>
+      </div>
+      
+      <div class="card-body">
+        <div class="signature-flex-container">
+          <div class="qr-code-section">
+            <div class="qr-container">
+              <qrcode
+                [qrdata]="getSignatureLink()"
+                [width]="160"
+                [errorCorrectionLevel]="'M'">
+              </qrcode>
+              <p class="qr-hint">Escaneie para assinar</p>
+            </div>
+          </div>
+
+          <div class="link-info-section">
+            <p class="card-description">
+              Envie o link abaixo para o funcionário realizar a assinatura digital em qualquer dispositivo.
+            </p>
+
+            <div class="link-field-group">
+              <div class="link-input-wrapper">
+                <input type="text" [value]="getSignatureLink()" readonly #linkInput class="readonly-link-input">
+                <button mat-icon-button (click)="copyLink(linkInput.value)" matTooltip="Copiar link" class="copy-btn">
+                  <mat-icon>content_copy</mat-icon>
+                </button>
+              </div>
+              
+              <button mat-flat-button color="primary" (click)="openSignatureLink()" class="open-btn">
+                <mat-icon>open_in_new</mat-icon> Abrir Link
+              </button>
+            </div>
+
+            <div *ngIf="form.get('signed')?.value" class="signed-badge">
+              <div class="badge-content">
+                <mat-icon>check_circle</mat-icon>
+                <span>Assinado em {{ form.get('signatureDate')?.value | date:'dd/MM/yyyy HH:mm' }}</span>
+              </div>
+              <a [href]="form.get('signatureUrl')?.value" target="_blank" class="view-sig-link">
+                <mat-icon>image</mat-icon> Ver Assinatura
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <h3 class="section-title">Termo de Entrega Assinado (Upload)</h3>
     <div class="upload-container">
       <input #fileInput type="file" (change)="onFileSelected($event)" accept="application/pdf,image/*" style="display: none;">
       

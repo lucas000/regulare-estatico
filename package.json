@@ -25,6 +25,8 @@
     "@angular/platform-browser-dynamic": "^17.3.0",
     "@angular/router": "^17.3.0",
     "@types/pdfmake": "^0.3.2",
+    "angularx-qrcode": "^17.0.1",
+    "cors": "~2.8.5",
     "firebase": "^10.12.4",
     "iconoir": "^7.11.0",
     "material-icons": "^1.13.14",

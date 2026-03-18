@@ -30,6 +30,10 @@ export interface EpiDelivery {
   receiptUrl?: string; // Comprovante opcional
   receiptName?: string;
   
+  signatureUrl?: string;
+  signatureDate?: string;
+  signed?: boolean;
+  
   createdAt: string;
   updatedAt: string;
   createdBy: AuditUser;

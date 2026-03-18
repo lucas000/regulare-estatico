@@ -14,6 +14,7 @@ import { MatTableModule } from '@angular/material/table';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatDividerModule } from '@angular/material/divider';
+import { QRCodeModule } from 'angularx-qrcode';
 import { Subscription, Observable, of, from } from 'rxjs';
 import * as pdfMake from 'pdfmake/build/pdfmake';
 import * as pdfFonts from 'pdfmake/build/vfs_fonts';
@@ -32,6 +33,7 @@ import { EquipmentDialogComponent } from '../../cadastros/equipments/equipment-d
 import { RiskDialogComponent } from '../../cadastros/risks/risk-dialog.component';
 import { StorageService } from '../../../core/services/storage.service';
 import { AuditHistoryDialogComponent, AuditHistoryData } from '../../../core/components/audit-history-dialog.component';
+import { ref, getBytes, Storage } from '@angular/fire/storage';
 
 @Component({
     selector: 'app-epi-delivery-dialog',
@@ -52,6 +54,7 @@ import { AuditHistoryDialogComponent, AuditHistoryData } from '../../../core/com
         MatSnackBarModule,
         MatProgressBarModule,
         MatDividerModule,
+        QRCodeModule,
     ],
     templateUrl: './epi-delivery-dialog.component.html',
     styleUrls: ['./epi-delivery-dialog.component.scss'],
@@ -84,7 +87,7 @@ export class EpiDeliveryDialogComponent implements OnInit, OnDestroy {
 
     private readonly fb = inject(FormBuilder);
     private readonly dialogRef = inject(MatDialogRef<EpiDeliveryDialogComponent>);
-    private readonly data = inject(MAT_DIALOG_DATA, { optional: true });
+    public readonly data = inject(MAT_DIALOG_DATA, { optional: true });
     private readonly companiesService = inject(CompaniesService);
     private readonly unitsRepo = inject(UnitsRepository);
     private readonly sectorsRepo = inject(SectorsFiltersRepository);
@@ -98,6 +101,7 @@ export class EpiDeliveryDialogComponent implements OnInit, OnDestroy {
     private readonly snack = inject(MatSnackBar);
     private readonly dialog = inject(MatDialog);
     private readonly storage = inject(StorageService);
+    private readonly fireStorage = inject(Storage);
 
     isCliente = this.session.hasRole(['CLIENTE'] as any);
     displayedColumns: string[] = ['name', 'ca', 'quantity', 'signature', 'actions'];
@@ -116,6 +120,9 @@ export class EpiDeliveryDialogComponent implements OnInit, OnDestroy {
             employeeId: ['', [Validators.required]],
             deliveryDate: [new Date().toISOString().substring(0, 10), [Validators.required]],
             notes: [''],
+            signed: [false],
+            signatureUrl: [''],
+            signatureDate: [''],
         });
 
         if (this.data) {
@@ -124,6 +131,11 @@ export class EpiDeliveryDialogComponent implements OnInit, OnDestroy {
             if (this.data.items) this.deliveryItems = [...this.data.items];
             if (this.data.riskIds) this.selectedRisksIds = [...this.data.riskIds];
             if (this.data.receiptUrl) this.currentFileUrl = this.data.receiptUrl;
+            
+            // Novos campos de assinatura
+            if (this.data.signed) this.form.get('signed')?.setValue(true);
+            if (this.data.signatureUrl) this.form.get('signatureUrl')?.setValue(this.data.signatureUrl);
+            if (this.data.signatureDate) this.form.get('signatureDate')?.setValue(this.data.signatureDate);
         }
     }
 
@@ -540,8 +552,8 @@ export class EpiDeliveryDialogComponent implements OnInit, OnDestroy {
         });
     }
 
-    downloadTerm() {
-        if (!this.selectedEmployee) {
+    async downloadTerm() {
+        if (!this.selectedEmployee && !this.data) {
             this.snack.open('Selecione um funcionário antes de gerar o termo.', 'OK', { duration: 3000 });
             return;
         }
@@ -550,8 +562,7 @@ export class EpiDeliveryDialogComponent implements OnInit, OnDestroy {
         const company = this.companies.find(c => c.id === val.companyId);
         const unit = this.units.find(u => u.id === val.unitId);
         const sector = this.sectors.find(s => s.id === val.sectorId);
-        const createdBy = this.session.user();
-
+        
         // Em caso de edição onde o funcionário não foi re-selecionado, usar os dados do objeto original (data)
         const emp = this.selectedEmployee || this.data || {};
         const cpf = emp.cpf || emp.employeeCpf || 'N/A';
@@ -559,13 +570,21 @@ export class EpiDeliveryDialogComponent implements OnInit, OnDestroy {
         const admission = emp.admissionDate || emp.employeeAdmissionDate;
         const cnpj = company?.document || company?.cnpj || this.data?.companyCnpj || 'N/A';
 
-        const selectedRisks = this.allCompanyRisks
-            .filter(r => this.selectedRisksIds.includes(r.id))
-            .map(r => r.name);
-
         // Garantir que vfs esteja configurado no momento do uso, caso a inicialização estática falhe
         if (!(pdfMake as any).vfs) {
             (pdfMake as any).vfs = (pdfFonts as any).pdfMake ? (pdfFonts as any).pdfMake.vfs : (pdfFonts as any).vfs;
+        }
+
+        let signatureBase64 = null;
+        if (this.data?.signed && this.data?.signatureUrl) {
+            try {
+                this.snack.open('Processando assinatura para o PDF...', 'OK', { duration: 2000 });
+                signatureBase64 = await this.getBase64ImageFromURL(this.data.signatureUrl);
+            } catch (error) {
+                console.error('Erro ao converter assinatura para Base64:', error);
+                this.snack.open('Aviso: Erro de segurança (CORS) ao carregar assinatura do Firebase.', 'OK', { duration: 6000 });
+                console.warn('DICA: O bucket do Firebase Storage precisa estar configurado para permitir CORS da origem atual.');
+            }
         }
 
         const docDefinition: any = {
@@ -636,7 +655,6 @@ export class EpiDeliveryDialogComponent implements OnInit, OnDestroy {
                                 { text: 'Validade CA', style: 'tableHeader' },
                                 { text: 'Tamanho', style: 'tableHeader' },
                                 { text: 'Nota Fiscal/Ano', style: 'tableHeader' },
-                                // { text: 'ASSINATURA', style: 'tableHeader' }
                             ],
                             ...this.deliveryItems.map(item => [
                                 this.formatDate(val.deliveryDate),
@@ -647,22 +665,11 @@ export class EpiDeliveryDialogComponent implements OnInit, OnDestroy {
                                 item.validUntil ? item.validUntil : 'N/A',
                                 item.epiSize || 'N/A',
                                 item.invoiceNumber || 'N/A',
-                                // ''
                             ])
                         ]
                     },
                     margin: [0, 0, 0, 20]
                 },
-
-                // {
-                //     text: 'RISCOS RELACIONADOS À ATIVIDADE',
-                //     style: 'sectionTitle',
-                //     margin: [0, 0, 0, 5]
-                // },
-                // {
-                //     ul: selectedRisks.length > 0 ? selectedRisks : ['Nenhum risco selecionado'],
-                //     margin: [0, 0, 0, 20]
-                // },
 
                 {
                     text: 'RESPONSABILIDADES DO TRABALHADOR',
@@ -711,12 +718,24 @@ export class EpiDeliveryDialogComponent implements OnInit, OnDestroy {
                                         { text: 'IDENTIFICAÇÃO E ASSINATURA DO EMPREGADO', bold: true, fontSize: 10, margin: [0, 0, 0, 10] },
                                         {
                                             columns: [
-                                                { text: 'Local: ______________________________', margin: [0, 0, 0, 10] },
-                                                { text: 'Data: ____ / ____ / ______', margin: [0, 0, 0, 10] }
+                                                { text: `Local: ______________________________`, margin: [0, 0, 0, 10] },
+                                                { 
+                                                    text: `Data: ${this.data?.signed ? this.formatDateTime(this.data.signatureDate) : '____ / ____ / ______'}`, 
+                                                    margin: [0, 0, 0, 10] 
+                                                }
                                             ]
                                         },
+                                        // Se estiver assinado e o base64 estiver disponível, mostra a imagem da assinatura, caso contrário mostra a linha para assinatura manual
+                                        this.data?.signed && signatureBase64 ? 
+                                        {
+                                            image: 'signatureImage',
+                                            width: 200,
+                                            alignment: 'center',
+                                            margin: [0, 10, 0, 5]
+                                        } :
                                         { text: '________________________________________________________________________', alignment: 'center', margin: [0, 20, 0, 0] },
-                                        { text: `Assinatura do Empregado: ${this.selectedEmployee.name}`, alignment: 'center', fontSize: 9 }
+                                        
+                                        { text: `Assinatura do Empregado: ${emp.name || emp.employeeName}`, alignment: 'center', fontSize: 9 }
                                     ],
                                     margin: [5, 5, 5, 5]
                                 }
@@ -726,64 +745,14 @@ export class EpiDeliveryDialogComponent implements OnInit, OnDestroy {
                     margin: [0, 0, 0, 15]
                 },
 
-                // --- Seção: Responsável pela Entrega ---
-                {
-                    table: {
-                        widths: ['*'],
-                        body: [
-                            [
-                                {
-                                    stack: [
-                                        { text: 'RESPONSÁVEL PELA ENTREGA (EMPRESA)', bold: true, fontSize: 10, margin: [0, 0, 0, 10] },
-                                        {
-                                            columns: [
-                                                { text: `Nome:  '____________________________________`, fontSize: 9 },
-                                                { text: 'Cargo: ____________________________________', fontSize: 9 }
-                                            ],
-                                            margin: [0, 0, 0, 10]
-                                        },
-                                        { text: '________________________________________________________________________', alignment: 'center', margin: [0, 15, 0, 0] },
-                                        { text: 'Assinatura do Responsável', alignment: 'center', fontSize: 9 }
-                                    ],
-                                    margin: [5, 5, 5, 5]
-                                }
-                            ]
-                        ]
-                    },
-                    margin: [0, 0, 0, 15]
-                },
-
-                // --- Seção: Responsável Técnico (Opcional) ---
-                {
-                    table: {
-                        widths: ['*'],
-                        body: [
-                            [
-                                {
-                                    stack: [
-                                        { text: 'RESPONSÁVEL TÉCNICO DE SEGURANÇA DO TRABALHO (QUANDO APLICÁVEL)', bold: true, fontSize: 10, margin: [0, 0, 0, 10] },
-                                        {
-                                            columns: [
-                                                { text: 'Nome: ____________________________________', fontSize: 9 },
-                                                { text: 'Registro Profissional: _______________________', fontSize: 9 }
-                                            ],
-                                            margin: [0, 0, 0, 10]
-                                        },
-                                        { text: '________________________________________________________________________', alignment: 'center', margin: [0, 15, 0, 0] },
-                                        { text: 'Assinatura / Carimbo', alignment: 'center', fontSize: 9 }
-                                    ],
-                                    margin: [5, 5, 5, 5]
-                                }
-                            ]
-                        ]
-                    }
-                }
             ],
             footer: (currentPage: number, pageCount: number) => {
+                const creator = this.data?.createdBy?.name || 'Sistema';
+                const deliveryDateStr = this.formatDate(val.deliveryDate);
                 return {
                     stack: [
                         {
-                            text: 'Gerado automaticamente pelo sistema de gestão de EPIs.',
+                            text: `Entregue por: ${creator} e data ${deliveryDateStr} | Gerado automaticamente pelo sistema de gestão de EPIs.`,
                             alignment: 'center',
                             fontSize: 8,
                             color: '#666'
@@ -798,6 +767,9 @@ export class EpiDeliveryDialogComponent implements OnInit, OnDestroy {
                     margin: [0, 20, 0, 0]
                 };
             },
+            images: signatureBase64 ? {
+                signatureImage: signatureBase64
+            } : {},
             styles: {
                 header: {
                     fontSize: 14,
@@ -825,7 +797,78 @@ export class EpiDeliveryDialogComponent implements OnInit, OnDestroy {
             }
         };
 
-        pdfMake.createPdf(docDefinition).download(`termo_epi_${this.selectedEmployee.name.replace(/\s+/g, '_')}.pdf`);
+        const fileName = `termo_epi_${(emp.name || emp.employeeName || 'entrega').replace(/\s+/g, '_')}.pdf`;
+        pdfMake.createPdf(docDefinition).download(fileName);
+    }
+
+    private async getBase64ImageFromURL(url: string | undefined): Promise<string> {
+        if (!url) return Promise.reject('URL não fornecida');
+
+        // Camada 1: Se for um link do Firebase Storage, tentamos buscar via SDK para evitar CORS
+        if (url.includes('firebasestorage.googleapis.com')) {
+            try {
+                // Extrair o caminho do arquivo do URL (entre /o/ e ?)
+                const match = url.match(/\/o\/(.+?)\?/);
+                if (match && match[1]) {
+                    const storagePath = decodeURIComponent(match[1]);
+                    const storageRef = ref(this.fireStorage, storagePath);
+                    const bytes = await getBytes(storageRef);
+                    
+                    // Converter bytes para base64 usando chunking para evitar estouro de pilha
+                    const bytesArr = new Uint8Array(bytes);
+                    const CHUNK_SIZE = 0x8000;
+                    let binary = '';
+                    for (let i = 0; i < bytesArr.length; i += CHUNK_SIZE) {
+                        binary += String.fromCharCode.apply(null, Array.from(bytesArr.subarray(i, i + CHUNK_SIZE)));
+                    }
+                    return 'data:image/png;base64,' + btoa(binary);
+                }
+            } catch (err) {
+                console.warn('[DEBUG_LOG] SDK getBytes failed, falling back to Canvas:', err);
+            }
+        }
+
+        // Camada 2: Técnica sugerida pelo usuário (CORS + Canvas -> Base64)
+        return new Promise((resolve, reject) => {
+            const img = new Image();
+            
+            // 1. Solicita a imagem com permissão CORS
+            img.setAttribute('crossOrigin', 'anonymous');
+            
+            // Adicionar timestamp para evitar cache que possa ter sido carregado sem CORS anteriormente
+            const corsUrl = url.includes('?') ? `${url}&t=${Date.now()}` : `${url}?t=${Date.now()}`;
+            
+            img.onload = () => {
+                try {
+                    // 2. Desenha a imagem em um elemento <canvas>
+                    const canvas = document.createElement('canvas');
+                    canvas.width = img.width;
+                    canvas.height = img.height;
+                    const ctx = canvas.getContext('2d');
+                    if (!ctx) {
+                        reject('Não foi possível obter o contexto do canvas');
+                        return;
+                    }
+                    // @ts-ignore
+                    ctx.drawImage(img, 0, 0);
+                    
+                    // 3. Converte o conteúdo do canvas para uma string Base64
+                    const dataURL = canvas.toDataURL('image/png');
+                    
+                    // 4. Utiliza essa string Base64 (resolve para ser usada no pdfMake)
+                    resolve(dataURL);
+                } catch (e) {
+                    reject(e);
+                }
+            };
+            
+            img.onerror = (error) => {
+                console.error('[DEBUG_LOG] Error loading image with CORS:', error);
+                reject('Error loading image.');
+            };
+            
+            img.src = corsUrl;
+        });
     }
 
     private formatDate(dateStr: string): string {
@@ -838,5 +881,32 @@ export class EpiDeliveryDialogComponent implements OnInit, OnDestroy {
         } catch (e) {
             return dateStr;
         }
+    }
+
+    private formatDateTime(dateStr: string | undefined): string {
+        if (!dateStr) return '____ / ____ / ______';
+        try {
+            const date = new Date(dateStr);
+            return date.toLocaleString('pt-BR');
+        } catch (e) {
+            return dateStr;
+        }
+    }
+
+    getSignatureLink(): string {
+        if (!this.data?.id) return '';
+        const baseUrl = window.location.origin;
+        return `${baseUrl}/assinatura/${this.data.id}`;
+    }
+
+    copyLink(link: string) {
+        navigator.clipboard.writeText(link).then(() => {
+            this.snack.open('Link copiado!', 'Fechar', { duration: 2000 });
+        });
+    }
+
+    openSignatureLink() {
+        const link = this.getSignatureLink();
+        if (link) window.open(link, '_blank');
     }
 }

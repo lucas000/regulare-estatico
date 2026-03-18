@@ -24,7 +24,10 @@ export class EpiDeliveriesRepository extends BaseFirestoreService<EpiDelivery> {
       constraints.push(where('employeeId', '==', employeeId));
     }
 
-    constraints.push(where('deleted', '!=', true));
+    // Filtrar apenas se deletado não for explicitamente true
+    // Note: Documentos sem o campo 'deleted' serão omitidos por filtros de desigualdade (!=) no Firestore.
+    // Por isso adicionamos 'deleted: false' na criação.
+    constraints.push(where('deleted', '==', false));
 
     constraints.push(orderBy('deliveryDate', 'desc'));
     constraints.push(limit(pageSize));

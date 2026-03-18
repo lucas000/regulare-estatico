@@ -1,0 +1,259 @@
+.container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  padding: 24px;
+  background-color: #f8f9fa;
+}
+
+.signature-card {
+  width: 100%;
+  max-width: 800px;
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+  overflow: hidden;
+
+  mat-card-header {
+    background: #fff;
+    padding: 24px;
+    border-bottom: 1px solid #f0f0f0;
+    justify-content: center;
+
+    .main-title {
+      font-size: 24px;
+      font-weight: 700;
+      color: #1a237e;
+      margin: 0;
+      text-align: center;
+    }
+  }
+
+  mat-card-content {
+    padding: 24px !important;
+  }
+}
+
+.state-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 60px 24px;
+  text-align: center;
+  gap: 16px;
+  color: #666;
+  
+  &.error {
+    color: #d32f2f;
+    mat-icon { font-size: 64px; width: 64px; height: 64px; }
+  }
+}
+
+.delivery-container {
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+}
+
+/* Grid de Informações */
+.delivery-info-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+  background: #f1f3f4;
+  padding: 20px;
+  border-radius: 8px;
+
+  .info-item {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+
+    .info-label {
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: #5f6368;
+      font-weight: 600;
+    }
+
+    .info-value {
+      font-size: 15px;
+      color: #202124;
+      font-weight: 500;
+    }
+  }
+}
+
+/* Seções */
+.section-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: #1a237e;
+  margin: 0 0 16px 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  &.centered {
+    justify-content: center;
+  }
+}
+
+/* Tabela Moderna */
+.table-container {
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.modern-table {
+  width: 100%;
+  border-collapse: collapse;
+  
+  th {
+    background: #f8f9fa;
+    color: #3c4043;
+    font-weight: 600;
+    text-align: left;
+    font-size: 13px;
+    padding: 12px 16px;
+    border-bottom: 2px solid #eee;
+  }
+
+  td {
+    padding: 12px 16px;
+    color: #3c4043;
+    font-size: 14px;
+    border-bottom: 1px solid #f1f1f1;
+  }
+
+  tr:last-child td {
+    border-bottom: none;
+  }
+
+  tr:hover {
+    background: #fafafa;
+  }
+}
+
+/* Card de Assinatura */
+.signature-section-card {
+  background: #fff;
+  border: 1px solid #e0e0e0;
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+}
+
+.canvas-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  align-items: center;
+}
+
+.canvas-container {
+  width: 100%;
+  max-width: 600px;
+  border: 2px dashed #bdbdbd;
+  border-radius: 8px;
+  background: #fff;
+  cursor: crosshair;
+  transition: border-color 0.2s;
+
+  &:hover {
+    border-color: #1a237e;
+  }
+  
+  canvas {
+    width: 100%;
+    height: 250px;
+    display: block;
+    touch-action: none;
+  }
+}
+
+.canvas-actions {
+  display: flex;
+  gap: 12px;
+  width: 100%;
+  max-width: 600px;
+  justify-content: center;
+
+  button {
+    min-width: 140px;
+    padding: 8px 20px;
+  }
+
+  .btn-spinner {
+    margin-right: 8px;
+    display: inline-block;
+  }
+}
+
+/* Container de Assinado */
+.signed-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 24px;
+}
+
+.success-banner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: #e8f5e9;
+  color: #2e7d32;
+  padding: 16px 24px;
+  border-radius: 50px;
+
+  mat-icon { font-size: 24px; width: 24px; height: 24px; }
+  
+  .success-text {
+    display: flex;
+    flex-direction: column;
+    font-size: 14px;
+    
+    strong { font-weight: 600; }
+    span { font-size: 12px; opacity: 0.9; }
+  }
+}
+
+.signature-preview {
+  width: 100%;
+  max-width: 500px;
+  padding: 20px;
+  background: #fff;
+  border: 1px solid #eee;
+  border-radius: 8px;
+  display: flex;
+  justify-content: center;
+
+  img {
+    max-width: 100%;
+    height: auto;
+    filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));
+  }
+}
+
+/* Responsividade */
+@media (max-width: 768px) {
+  .delivery-info-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  .signature-card {
+    mat-card-header {
+      padding: 16px;
+      .main-title { font-size: 20px; }
+    }
+  }
+
+  .canvas-actions {
+    flex-direction: column;
+    button { width: 100%; }
+  }
+}
