@@ -518,7 +518,8 @@ export class EpiDeliveryDialogComponent implements OnInit, OnDestroy {
             items: this.deliveryItems,
             receiptUrl: this.currentFileUrl,
             receiptName: this.data?.receiptName,
-            _fileToUpload: this.selectedFile
+            _fileToUpload: this.selectedFile,
+            deleted: false
         };
 
         this.dialogRef.close(payload);
