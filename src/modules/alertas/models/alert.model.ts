@@ -13,6 +13,25 @@ export interface Alert {
   createdAt?: string;
 }
 
+export interface AlertGroup {
+  origemId: string;
+  origemTipo: string;
+  documento: string;
+  companyName: string;
+  dataBaseVencimento: string;
+  alertas: {
+    offsetDias: number;
+    dataDisparo: string;
+    enviado: boolean;
+  }[];
+  dataMaisProxima: string;
+  proximoAlerta?: {
+    offsetDias: number;
+    dataDisparo: string;
+    enviado: boolean;
+  };
+}
+
 export interface AlertConfig {
   id: string;
   offsets: number[]; // e.g., [120, 30, 1, 0]
