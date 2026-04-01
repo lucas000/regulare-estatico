@@ -103,6 +103,15 @@
         <td mat-cell *matCellDef="let item"> {{ item.certificationNumber || 'N/A' }} </td>
       </ng-container>
 
+      <ng-container matColumnDef="validUntil">
+        <th mat-header-cell *matHeaderCellDef> Vencimento CA </th>
+        <td mat-cell *matCellDef="let item"> 
+          <span [ngClass]="{'text-danger': isExpired(item.validUntil)}">
+            {{ item.validUntil || 'N/A' }}
+          </span>
+        </td>
+      </ng-container>
+
       <ng-container matColumnDef="quantity">
         <th mat-header-cell *matHeaderCellDef> Qtd </th>
         <td mat-cell *matCellDef="let item"> 

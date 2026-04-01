@@ -116,6 +116,19 @@ export class LicenseDialogComponent implements OnInit, OnDestroy {
     return this.form?.get('documentType')?.value === 'Cadastro Ambiental Rural (CAR)';
   }
 
+  // Verifica se o grupo é "Licenciamento Ambiental" e se o tipo exige data de renovação
+  get isEnvironmentalLicensingWithRenewal(): boolean {
+    const group = this.form?.get('documentGroup')?.value;
+    const type = this.form?.get('documentType')?.value;
+    const renewalTypes = [
+      'Licença Prévia (LP)',
+      'Licença de Instalação (LI)',
+      'Licença de Operação (LO)',
+      'Renovação da LO'
+    ];
+    return group === 'Licenciamento Ambiental' && renewalTypes.includes(type);
+  }
+
   private initForm(): void {
     this.form = this.fb.group({
       companyId: ['', Validators.required],
@@ -128,6 +141,7 @@ export class LicenseDialogComponent implements OnInit, OnDestroy {
       periodicity: [''],
       issueDate: ['', [Validators.required, Validators.pattern(/^\d{2}\/\d{2}\/\d{4}$/)]],
       expirationDate: ['', [Validators.required, Validators.pattern(/^\d{2}\/\d{2}\/\d{4}$/)]],
+      renewalDate: ['', [Validators.pattern(/^\d{2}\/\d{2}\/\d{4}$/)]],
       pdfUrl: [''],
       notes: [''],
       // Campo de matrículas rurais (obrigatório para CAR)
@@ -154,6 +168,9 @@ export class LicenseDialogComponent implements OnInit, OnDestroy {
         // Atualiza validações dos campos de Responsável Técnico
         this.updateTechnicalResponsibleValidators(group === 'Programas de SST');
 
+        // Atualiza validadores de data de renovação
+        this.updateRenewalDateValidator(this.isEnvironmentalLicensingWithRenewal);
+
         this.cd.markForCheck();
       }) as Subscription
     );
@@ -162,6 +179,7 @@ export class LicenseDialogComponent implements OnInit, OnDestroy {
     this.subs.add(
       this.form.get('documentType')?.valueChanges.subscribe((docType: string) => {
         this.updateRuralRegistrationsValidator(docType === 'Cadastro Ambiental Rural (CAR)');
+        this.updateRenewalDateValidator(this.isEnvironmentalLicensingWithRenewal);
         this.cd.markForCheck();
       }) as Subscription
     );
@@ -188,6 +206,11 @@ export class LicenseDialogComponent implements OnInit, OnDestroy {
           this.updateRuralRegistrationsValidator(true);
         }
 
+        // Se é Licenciamento Ambiental com Renovação, ativa a validação
+        if (this.isEnvironmentalLicensingWithRenewal) {
+          this.updateRenewalDateValidator(true);
+        }
+
         this.form.patchValue({
           companyId: this.data.companyId,
           unitId: this.data.unitId,
@@ -199,6 +222,7 @@ export class LicenseDialogComponent implements OnInit, OnDestroy {
           periodicity: this.data.periodicity || '',
           issueDate: this.data.issueDate,
           expirationDate: this.data.expirationDate,
+          renewalDate: this.data.renewalDate || '',
           pdfUrl: this.data.pdfUrl,
           notes: this.data.notes,
           // Campo de matrículas rurais
@@ -336,6 +360,21 @@ export class LicenseDialogComponent implements OnInit, OnDestroy {
     }
   }
 
+  // Atualiza validador do campo de data de renovação
+  private updateRenewalDateValidator(isRequired: boolean): void {
+    const control = this.form.get('renewalDate');
+    if (control) {
+      const validators = [Validators.pattern(/^\d{2}\/\d{2}\/\d{4}$/)];
+      if (isRequired) {
+        validators.push(Validators.required);
+      } else {
+        control.setValue(''); // Limpa o valor se não for obrigatório
+      }
+      control.setValidators(validators);
+      control.updateValueAndValidity();
+    }
+  }
+
   onPdfSelected(event: Event): void {
     const input = event.target as HTMLInputElement;
     const files = input.files;
@@ -360,9 +399,11 @@ export class LicenseDialogComponent implements OnInit, OnDestroy {
   validateDates(): string | null {
     const issue = this.form.get('issueDate')?.value;
     const expiration = this.form.get('expirationDate')?.value;
+    const renewal = this.form.get('renewalDate')?.value;
 
     if (!this.isDateValid(issue)) return 'Data de emissão inválida';
     if (!this.isDateValid(expiration)) return 'Data de vencimento inválida';
+    if (this.isEnvironmentalLicensingWithRenewal && !this.isDateValid(renewal)) return 'Data de renovação inválida';
 
     const [dI, mI, yI] = issue.split('/').map(Number);
     const [dE, mE, yE] = expiration.split('/').map(Number);

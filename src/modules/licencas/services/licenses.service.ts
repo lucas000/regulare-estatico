@@ -3,6 +3,8 @@ import { LicensesRepository } from '../repositories/licenses.repository';
 import { License, AuditUser, calculateLicenseStatus } from '../models/license.model';
 import { SessionService } from '../../../core/services/session.service';
 import { UsersRepository } from '../../../core/services/users.repository';
+import { AlertsService } from '../../alertas/services/alerts.service';
+import { CompaniesRepository } from '../../cadastros/repositories/companies.repository';
 
 function makeId(prefix = '') {
   return `${prefix}${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
@@ -13,6 +15,8 @@ export class LicensesService {
   private readonly repo = inject(LicensesRepository);
   private readonly session = inject(SessionService);
   private readonly usersRepo = inject(UsersRepository);
+  private readonly alerts = inject(AlertsService);
+  private readonly companiesRepo = inject(CompaniesRepository);
 
   private async getAuditUser(): Promise<AuditUser> {
     const fbUser = this.session.user();
@@ -25,6 +29,22 @@ export class LicensesService {
       name: userDoc?.name ?? fbUser.name ?? 'Usuário',
       email: userDoc?.email ?? fbUser.email ?? '',
     };
+  }
+
+  private getLicenseAlertDate(license: Partial<License>): string {
+    const group = license.documentGroup;
+    const type = license.documentType;
+    const renewalTypes = [
+      'Licença Prévia (LP)',
+      'Licença de Instalação (LI)',
+      'Licença de Operação (LO)',
+      'Renovação da LO'
+    ];
+    const isEnvironmentalWithRenewal = group === 'Licenciamento Ambiental' && renewalTypes.includes(type ?? '');
+
+    return isEnvironmentalWithRenewal && license.renewalDate 
+      ? license.renewalDate 
+      : (license.expirationDate ?? '');
   }
 
   async createLicense(data: Partial<License>): Promise<License> {
@@ -44,6 +64,7 @@ export class LicensesService {
       periodicity: data.periodicity,
       issueDate: data.issueDate ?? '',
       expirationDate: data.expirationDate ?? '',
+      renewalDate: data.renewalDate ?? '',
       status: calculateLicenseStatus(data.expirationDate ?? ''),
       pdfUrl: data.pdfUrl ?? '',
       pdfName: data.pdfName ?? '',
@@ -60,6 +81,19 @@ export class LicensesService {
     };
 
     await this.repo.create(license);
+    
+    const company = await this.companiesRepo.get(license.companyId);
+    await this.alerts.generateAlerts(
+      'licenca', 
+      license.id, 
+      audit.uid, 
+      this.getLicenseAlertDate(license),
+      {
+        companyId: license.companyId,
+        companyName: company?.nomeFantasia || company?.razaoSocial || 'N/A',
+        documento: `${license.documentType} (${license.documentNumber})`
+      }
+    );
     return license;
   }
 
@@ -69,10 +103,16 @@ export class LicensesService {
 
     const updateData: Partial<License> = {
       ...data,
-      status: calculateLicenseStatus(data.expirationDate ?? ''),
       updatedAt: now,
       updatedBy: audit,
     };
+
+    // Recalcular status se necessário
+    const current = await this.getById(id);
+    if (current) {
+      const merged = { ...current, ...data };
+      updateData.status = calculateLicenseStatus(this.getLicenseAlertDate(merged));
+    }
 
     // Campos em uppercase
     if (updateData.documentNumber) {
@@ -83,11 +123,33 @@ export class LicensesService {
     }
 
     await this.repo.updateLicense(id, updateData);
+
+    if (updateData.expirationDate || updateData.renewalDate || updateData.documentType || updateData.documentNumber || updateData.companyId) {
+      if (current) {
+        // Clear existing alerts for this specific license before regenerating
+        await this.alerts.deleteAlertsByOrigin(id);
+
+        const updatedLicense = { ...current, ...updateData };
+        const company = await this.companiesRepo.get(updatedLicense.companyId);
+        await this.alerts.generateAlerts(
+          'licenca', 
+          id, 
+          audit.uid, 
+          this.getLicenseAlertDate(updatedLicense), // Usa a data atualizada do registro
+          {
+            companyId: updatedLicense.companyId,
+            companyName: company?.nomeFantasia || company?.razaoSocial || 'N/A',
+            documento: `${updatedLicense.documentType} (${updatedLicense.documentNumber})`
+          }
+        );
+      }
+    }
   }
 
   async toggleStatus(license: License): Promise<void> {
-    // Recalcular status baseado na data de vencimento
-    const newStatus = calculateLicenseStatus(license.expirationDate);
+    // Recalcular status baseado na data correta (renovação ou vencimento)
+    const alertDate = this.getLicenseAlertDate(license);
+    const newStatus = calculateLicenseStatus(alertDate);
     await this.updateLicense(license.id, { status: newStatus });
   }
 
@@ -129,7 +191,8 @@ export class LicensesService {
   async recalculateAllStatuses(): Promise<void> {
     const licenses = await this.repo.listAll(1000);
     for (const lic of licenses) {
-      const newStatus = calculateLicenseStatus(lic.expirationDate);
+      const alertDate = this.getLicenseAlertDate(lic);
+      const newStatus = calculateLicenseStatus(alertDate);
       if (lic.status !== newStatus) {
         await this.repo.updateLicense(lic.id, { status: newStatus });
       }

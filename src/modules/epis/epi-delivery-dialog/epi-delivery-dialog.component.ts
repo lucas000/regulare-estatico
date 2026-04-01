@@ -108,13 +108,26 @@ export class EpiDeliveryDialogComponent implements OnInit, OnDestroy {
     private readonly epiDeliveriesService = inject(EpiDeliveriesService);
 
     isCliente = this.session.hasRole(['CLIENTE'] as any);
-    displayedColumns: string[] = ['name', 'ca', 'quantity', 'signature', 'actions'];
+    displayedColumns: string[] = ['name', 'ca', 'validUntil', 'quantity', 'signature', 'actions'];
 
     // Estado para arquivo do termo assinado
     selectedFile: File | null = null;
     selectedFileName: string = '';
     currentFileUrl: string = '';
     uploadingFile = false;
+
+    isExpired(dateStr?: string): boolean {
+        if (!dateStr) return false;
+        try {
+            const [d, m, y] = dateStr.split('/').map(Number);
+            const date = new Date(y, m - 1, d);
+            const hoje = new Date();
+            hoje.setHours(0, 0, 0, 0);
+            return date.getTime() < hoje.getTime();
+        } catch {
+            return false;
+        }
+    }
 
     constructor() {
         this.form = this.fb.group({
@@ -467,11 +480,10 @@ export class EpiDeliveryDialogComponent implements OnInit, OnDestroy {
         ref.afterClosed().subscribe(res => {
             if (res) {
                 // Atualiza todos os campos retornados, preservando os campos específicos da entrega
-                const { quantity, nextExchangeDate, equipmentId } = item;
+                const { quantity, equipmentId } = item;
                 Object.assign(item, res);
                 item.equipmentId = equipmentId; // garante que o ID de referência não mude
                 item.quantity = quantity;
-                item.nextExchangeDate = nextExchangeDate;
 
                 this.deliveryItems = [...this.deliveryItems];
                 this.cd.markForCheck();

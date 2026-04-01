@@ -304,6 +304,16 @@
   }
 }
 
+.text-danger {
+  color: #f44336 !important;
+  font-weight: 500;
+}
+
+.text-warn {
+  color: #ff9800 !important;
+  font-weight: 500;
+}
+
 @media (max-width: 600px) {
   .grid {
     grid-template-columns: 1fr;
