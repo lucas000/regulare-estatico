@@ -1,27 +1,233 @@
-<div class="company-badge">
-  <mat-icon>business</mat-icon>
-  <span>{{ companyName() }}</span>
-</div>
+<div class="dashboard-container">
+  <div class="header-info">
+    <h2>Bem-vindo, {{ userName() }}!</h2>
+    <div class="company-badge">
+      <mat-icon>business</mat-icon>
+      <span>{{ companyName() }}</span>
+    </div>
+  </div>
 
-<div class="grid">
-  <mat-card class="stat">
-    <div class="stat-header"><mat-icon>assignment</mat-icon> Licenças</div>
-    <div class="stat-value">--</div>
-  </mat-card>
-  <mat-card class="stat">
-    <div class="stat-header"><mat-icon>rule</mat-icon> Condicionantes</div>
-    <div class="stat-value">--</div>
-  </mat-card>
-  <mat-card class="stat">
-    <div class="stat-header"><mat-icon>health_and_safety</mat-icon> EPIs</div>
-    <div class="stat-value">--</div>
-  </mat-card>
-  <mat-card class="stat">
-    <div class="stat-header"><mat-icon>notifications</mat-icon> Alertas</div>
-    <div class="stat-value">--</div>
-  </mat-card>
+  <div class="stats-grid" *ngIf="stats() as s">
+    <!-- Card 1: Licenças -->
+    <mat-card class="dashboard-card">
+      <mat-card-header>
+        <mat-card-title
+          ><mat-icon>assignment</mat-icon> Licenças</mat-card-title
+        >
+      </mat-card-header>
+      <mat-card-content class="card-columns">
+        <div class="col green">
+          <span class="value">{{ s.licenses.emDia }}</span>
+          <span class="label">Em dia</span>
+        </div>
+        <div class="col yellow">
+          <span class="value">{{ s.licenses.aVencer }}</span>
+          <span class="label">A vencer</span>
+        </div>
+        <div class="col red">
+          <span class="value">{{ s.licenses.vencidas }}</span>
+          <span class="label">Vencidas</span>
+        </div>
+      </mat-card-content>
+    </mat-card>
+
+    <!-- Card 2: Condicionantes -->
+    <mat-card class="dashboard-card">
+      <mat-card-header>
+        <mat-card-title
+          ><mat-icon>rule</mat-icon> Condicionantes</mat-card-title
+        >
+      </mat-card-header>
+      <mat-card-content class="card-columns">
+        <div class="col green">
+          <span class="value">{{ s.conditions.emDia }}</span>
+          <span class="label">Em dia</span>
+        </div>
+        <div class="col yellow">
+          <span class="value">{{ s.conditions.pendentes }}</span>
+          <span class="label">Pendentes</span>
+        </div>
+        <div class="col red">
+          <span class="value">{{ s.conditions.vencidas }}</span>
+          <span class="label">Vencidas</span>
+        </div>
+      </mat-card-content>
+    </mat-card>
+
+    <!-- Card 3: EPIs -->
+    <mat-card class="dashboard-card">
+      <mat-card-header>
+        <mat-card-title
+          ><mat-icon>health_and_safety</mat-icon> EPIs</mat-card-title
+        >
+      </mat-card-header>
+      <mat-card-content class="card-columns">
+        <div class="col green">
+          <span class="value">{{ s.epis.ok }}</span>
+          <span class="label">OK</span>
+        </div>
+        <div class="col yellow">
+          <span class="value">{{ s.epis.aVencer }}</span>
+          <span class="label">A vencer</span>
+        </div>
+        <div class="col red">
+          <span class="value">{{ s.epis.vencidas }}</span>
+          <span class="label">Vencidas</span>
+        </div>
+      </mat-card-content>
+    </mat-card>
+  </div>
+
+  <div class="tables-container" *ngIf="stats() as s">
+    <!-- Card 4: Agenda de Prazos -->
+    <mat-card class="table-card agenda-card">
+      <mat-card-header>
+        <mat-card-title
+          ><mat-icon>event_note</mat-icon> Agenda de Prazos</mat-card-title
+        >
+      </mat-card-header>
+      <mat-card-content>
+        <table mat-table [dataSource]="s.agenda" class="full-width-table">
+          <ng-container matColumnDef="date">
+            <th mat-header-cell *matHeaderCellDef>Data</th>
+            <td mat-cell *matCellDef="let item">
+              {{ formatDateBR(item.date) }}
+            </td>
+          </ng-container>
+          <ng-container matColumnDef="type">
+            <th mat-header-cell *matHeaderCellDef>Tipo</th>
+            <td mat-cell *matCellDef="let item">{{ item.type }}</td>
+          </ng-container>
+          <ng-container matColumnDef="document">
+            <th mat-header-cell *matHeaderCellDef>Documento</th>
+            <td mat-cell *matCellDef="let item">{{ item.document }}</td>
+          </ng-container>
+          <ng-container matColumnDef="company">
+            <th mat-header-cell *matHeaderCellDef>Empresa</th>
+            <td mat-cell *matCellDef="let item">{{ item.companyName }}</td>
+          </ng-container>
+          <ng-container matColumnDef="status">
+            <th mat-header-cell *matHeaderCellDef>Status</th>
+            <td mat-cell *matCellDef="let item">
+              <span
+                class="status-badge"
+                [ngClass]="item.status.toLowerCase().replace(' ', '-')"
+              >
+                {{ item.status }}
+              </span>
+            </td>
+          </ng-container>
+
+          <tr mat-header-row *matHeaderRowDef="agendaColumns"></tr>
+          <tr mat-row *matRowDef="let row; columns: agendaColumns"></tr>
+        </table>
+        <div class="empty-state" *ngIf="s.agenda.length === 0">
+          Nenhum compromisso encontrado.
+        </div>
+      </mat-card-content>
+    </mat-card>
+
+    <!-- Card 5: Próximos Vencimentos -->
+    <mat-card class="table-card upcoming-card">
+      <mat-card-header>
+        <mat-card-title
+          ><mat-icon>notification_important</mat-icon> Próximos
+          Vencimentos</mat-card-title
+        >
+      </mat-card-header>
+      <mat-card-content>
+        <table mat-table [dataSource]="s.upcoming" class="full-width-table">
+          <ng-container matColumnDef="type">
+            <th mat-header-cell *matHeaderCellDef>Tipo</th>
+            <td mat-cell *matCellDef="let item">{{ item.type }}</td>
+          </ng-container>
+          <ng-container matColumnDef="document">
+            <th mat-header-cell *matHeaderCellDef>Documento</th>
+            <td mat-cell *matCellDef="let item">{{ item.document }}</td>
+          </ng-container>
+          <ng-container matColumnDef="company">
+            <th mat-header-cell *matHeaderCellDef>Empresa</th>
+            <td mat-cell *matCellDef="let item">{{ item.companyName }}</td>
+          </ng-container>
+          <ng-container matColumnDef="date">
+            <th mat-header-cell *matHeaderCellDef>Vencimento</th>
+            <td mat-cell *matCellDef="let item" class="text-danger">
+              {{ formatDateBR(item.date) }}
+            </td>
+          </ng-container>
+
+          <tr mat-header-row *matHeaderRowDef="upcomingColumns"></tr>
+          <tr mat-row *matRowDef="let row; columns: upcomingColumns"></tr>
+        </table>
+        <div class="empty-state" *ngIf="s.upcoming.length === 0">
+          Nenhum vencimento próximo.
+        </div>
+      </mat-card-content>
+    </mat-card>
+  </div>
+
+  <!-- Novo Card: Detalhamento de Vencimentos (Largura Total) -->
+  <div class="full-width-container" *ngIf="stats() as s">
+    <mat-card class="table-card full-width-card">
+      <mat-card-header>
+        <mat-card-title
+          ><mat-icon>list_alt</mat-icon> Detalhamento de Próximos
+          Vencimentos</mat-card-title
+        >
+      </mat-card-header>
+      <mat-card-content>
+        <table mat-table [dataSource]="s.upcoming" class="full-width-table">
+          <ng-container matColumnDef="type">
+            <th mat-header-cell *matHeaderCellDef>Tipo</th>
+            <td mat-cell *matCellDef="let item">{{ item.type }}</td>
+          </ng-container>
+          <ng-container matColumnDef="document">
+            <th mat-header-cell *matHeaderCellDef>Documento</th>
+            <td mat-cell *matCellDef="let item">{{ item.document }}</td>
+          </ng-container>
+          <ng-container matColumnDef="company">
+            <th mat-header-cell *matHeaderCellDef>Empresa</th>
+            <td mat-cell *matCellDef="let item">{{ item.companyName }}</td>
+          </ng-container>
+          <ng-container matColumnDef="date">
+            <th mat-header-cell *matHeaderCellDef>Vencimento</th>
+            <td mat-cell *matCellDef="let item" class="text-danger">
+              {{ formatDateBR(item.date) }}
+            </td>
+          </ng-container>
+          <ng-container matColumnDef="daysRemaining">
+            <th mat-header-cell *matHeaderCellDef>Dias Restantes</th>
+            <td mat-cell *matCellDef="let item">
+              <span
+                [class.text-danger]="
+                  item.daysRemaining !== undefined && item.daysRemaining <= 0
+                "
+              >
+                {{
+                  item.daysRemaining !== undefined
+                    ? item.daysRemaining + ' dias'
+                    : '-'
+                }}
+              </span>
+            </td>
+          </ng-container>
+          <ng-container matColumnDef="actions">
+            <th mat-header-cell *matHeaderCellDef></th>
+            <td mat-cell *matCellDef="let item">
+              <button mat-button color="primary" (click)="openItem(item)">
+                ABRIR
+              </button>
+            </td>
+          </ng-container>
+
+          <tr mat-header-row *matHeaderRowDef="fullUpcomingColumns"></tr>
+          <tr mat-row *matRowDef="let row; columns: fullUpcomingColumns"></tr>
+        </table>
+      </mat-card-content>
+    </mat-card>
+  </div>
+
+  <div class="loading-overlay" *ngIf="loading()">
+    <p>Carregando dados...</p>
+  </div>
 </div>
-<mat-card>
-  <h2>Bem-vindo ao SYSMVN, {{ userName() }}!</h2>
-  <p>Base pronta para evoluir as funcionalidades de gestão regulatória.</p>
-</mat-card>
