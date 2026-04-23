@@ -74,21 +74,17 @@
     gap: 24px;
 
     @media (max-width: 1280px) {
-      flex-direction: column; // Empilha se a tela for pequena demais para o lado a lado
+      flex-direction: column;
     }
 
     .agenda-card {
-      flex: 2; // Ocupa aprox. 66%
-    }
-
-    .upcoming-card {
-      flex: 1; // Ocupa aprox. 33%
+      width: 100%;
     }
   }
 
   .full-width-container {
-    margin-top: 24px;
-    
+    margin-top: 24px; // Espaçamento igual ao de cima para manter a simetria
+
     .full-width-card {
       width: 100%;
     }
