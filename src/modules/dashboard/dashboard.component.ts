@@ -1,5 +1,6 @@
 import { Component, inject, OnInit, signal, effect, ChangeDetectorRef, untracked } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { Router, ActivatedRoute } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
@@ -35,6 +36,8 @@ export class DashboardComponent implements OnInit {
   private readonly dialog = inject(MatDialog);
   private readonly firestore = inject(Firestore);
   private readonly companiesService = inject(CompaniesService);
+  private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
 
   stats = signal<DashboardStats | null>(null);
   loading = signal(false);
@@ -93,6 +96,14 @@ export class DashboardComponent implements OnInit {
       date.setMinutes(date.getMinutes() + date.getTimezoneOffset());
       return date.toLocaleDateString('pt-BR');
     } catch { return dateStr; }
+  }
+
+  navigateTo(path: string, status?: string) {
+    // Usamos o caminho absoluto baseado no app.routes.ts para evitar redirecionamentos ao login
+    // O prefixo '/app' é o shell definido no seu roteamento principal
+    this.router.navigate(['/app', path], { 
+      queryParams: status ? { status } : {} 
+    });
   }
 
   async openItem(item: AgendaItem) {

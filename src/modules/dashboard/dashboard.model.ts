@@ -15,7 +15,7 @@ export interface DashboardStats {
     vencidas: number;
   };
   conditions: {
-    emDia: number;
+    cumpridas: number;
     pendentes: number;
     vencidas: number;
   };

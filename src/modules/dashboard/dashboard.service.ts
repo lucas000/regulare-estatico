@@ -30,7 +30,7 @@ export class DashboardService {
 
     // 2. Mapeia Condicionantes para Agenda
     const conditionItems: AgendaItem[] = conditions.map((c: any) => ({
-      id: c.licenseId || c.id, // Condicionantes geralmente levam à licença pai
+      id: c.id, // Usa o ID da própria condicionante para permitir a abertura do modal correto
       date: c.dueDate,
       type: 'Condicionante',
       document: c.description || 'Condicionante',
@@ -70,7 +70,7 @@ export class DashboardService {
         vencidas: licenses.filter((l: License) => calculateLicenseStatus(l.expirationDate) === 'vencida').length,
       },
       conditions: {
-        emDia: conditions.filter((c: LicenseCondition) => c.status === 'cumprida').length,
+        cumpridas: conditions.filter((c: LicenseCondition) => c.status === 'cumprida').length,
         pendentes: conditions.filter((c: LicenseCondition) => calculateConditionStatus(c.dueDate) === 'pendente' || calculateConditionStatus(c.dueDate) === 'a_vencer').length,
         vencidas: conditions.filter((c: LicenseCondition) => calculateConditionStatus(c.dueDate) === 'vencida').length,
       },
@@ -154,7 +154,7 @@ export class DashboardService {
   private getEmptyStats(): DashboardStats {
     return {
       licenses: { emDia: 0, aVencer: 0, vencidas: 0 },
-      conditions: { emDia: 0, pendentes: 0, vencidas: 0 },
+      conditions: { cumpridas: 0, pendentes: 0, vencidas: 0 },
       epis: { ok: 0, aVencer: 0, vencidas: 0 },
       agenda: [],
       upcoming: []

@@ -16,15 +16,15 @@
         >
       </mat-card-header>
       <mat-card-content class="card-columns">
-        <div class="col green">
+        <div class="col green" (click)="navigateTo('licencas', 'em_dia')">
           <span class="value">{{ s.licenses.emDia }}</span>
           <span class="label">Em dia</span>
         </div>
-        <div class="col yellow">
+        <div class="col yellow" (click)="navigateTo('licencas', 'a_vencer')">
           <span class="value">{{ s.licenses.aVencer }}</span>
           <span class="label">A vencer</span>
         </div>
-        <div class="col red">
+        <div class="col red" (click)="navigateTo('licencas', 'vencida')">
           <span class="value">{{ s.licenses.vencidas }}</span>
           <span class="label">Vencidas</span>
         </div>
@@ -39,15 +39,21 @@
         >
       </mat-card-header>
       <mat-card-content class="card-columns">
-        <div class="col green">
-          <span class="value">{{ s.conditions.emDia }}</span>
-          <span class="label">Em dia</span>
+        <div
+          class="col green"
+          (click)="navigateTo('condicionantes', 'cumprida')"
+        >
+          <span class="value">{{ s.conditions.cumpridas }}</span>
+          <span class="label">Cumpridas</span>
         </div>
-        <div class="col yellow">
+        <div
+          class="col yellow"
+          (click)="navigateTo('condicionantes', 'pendente')"
+        >
           <span class="value">{{ s.conditions.pendentes }}</span>
           <span class="label">Pendentes</span>
         </div>
-        <div class="col red">
+        <div class="col red" (click)="navigateTo('condicionantes', 'vencida')">
           <span class="value">{{ s.conditions.vencidas }}</span>
           <span class="label">Vencidas</span>
         </div>
@@ -62,15 +68,15 @@
         >
       </mat-card-header>
       <mat-card-content class="card-columns">
-        <div class="col green">
+        <div class="col green" (click)="navigateTo('epis')">
           <span class="value">{{ s.epis.ok }}</span>
           <span class="label">OK</span>
         </div>
-        <div class="col yellow">
+        <div class="col yellow" (click)="navigateTo('epis')">
           <span class="value">{{ s.epis.aVencer }}</span>
           <span class="label">A vencer</span>
         </div>
-        <div class="col red">
+        <div class="col red" (click)="navigateTo('epis')">
           <span class="value">{{ s.epis.vencidas }}</span>
           <span class="label">Vencidas</span>
         </div>
