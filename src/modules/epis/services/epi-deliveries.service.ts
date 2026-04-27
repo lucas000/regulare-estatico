@@ -4,6 +4,8 @@ import { EpiDelivery } from '../models/epi-delivery.model';
 import { SessionService } from '../../../core/services/session.service';
 import { UsersRepository } from '../../../core/services/users.repository';
 import { AuditUser } from '../../cadastros/models/company.model';
+import { AlertsService } from '../../alertas/services/alerts.service';
+import { CompaniesRepository } from '../../cadastros/repositories/companies.repository';
 
 function makeId(prefix = '') {
   return `${prefix}${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
@@ -14,9 +16,11 @@ export class EpiDeliveriesService {
   private readonly repo = inject(EpiDeliveriesRepository);
   private readonly session = inject(SessionService);
   private readonly usersRepo = inject(UsersRepository);
+  private readonly alerts = inject(AlertsService);
+  private readonly companiesRepo = inject(CompaniesRepository);
 
   private getUid(): string {
-    const u = (this.session as any).user?.();
+    const u = this.session.user();
     return u?.id ?? '';
   }
 
@@ -25,7 +29,7 @@ export class EpiDeliveriesService {
   }
 
   private getLoggedCompanyId(): string {
-    const u = (this.session as any).user?.();
+    const u = this.session.user();
     return u?.companyId ?? '';
   }
 
@@ -56,6 +60,8 @@ export class EpiDeliveriesService {
       cargoId: input.cargoId!,
       cargoName: input.cargoName!,
       cargoCbo: input.cargoCbo!,
+      companyName: input.companyName,
+      companyCnpj: input.companyCnpj,
       deliveryDate: input.deliveryDate || now,
       items: input.items || [],
       riskIds: input.riskIds || [],
@@ -63,6 +69,7 @@ export class EpiDeliveriesService {
       createdAt: now,
       updatedAt: now,
       createdBy: audit,
+      deleted: false,
     };
 
     // Remover campos undefined para não quebrar o Firestore
@@ -72,6 +79,32 @@ export class EpiDeliveriesService {
     });
 
     await this.repo.set(safeDoc);
+
+    // Gerar alertas para cada item com validade CA
+    if (doc.items && doc.items.length > 0) {
+      const company = await this.companiesRepo.get(doc.companyId);
+      const companyName = company?.nomeFantasia || company?.razaoSocial || 'N/A';
+      
+      // Limpar todos os alertas desta entrega (ID completo) antes de regenerar
+      await this.alerts.deleteAlertsByOriginPrefix(`${id}_`);
+
+      for (const item of doc.items) {
+        if (item.validUntil) {
+          await this.alerts.generateAlerts(
+            'epi', 
+            `${id}_${item.equipmentId}`, 
+            uid, 
+            item.validUntil,
+            {
+              companyId: doc.companyId,
+              companyName,
+              documento: `${item.name} (${doc.employeeName})`
+            }
+          );
+        }
+      }
+    }
+
     return id;
   }
 
@@ -87,6 +120,44 @@ export class EpiDeliveriesService {
     });
 
     await this.repo.update(id, safePatch);
+
+    // Se marcou como excluído, limpa todos os alertas vinculados
+    if (patch.deleted === true) {
+      await this.alerts.deleteAlertsByOriginPrefix(`${id}_`);
+      return;
+    }
+
+    // Se os itens ou dados base foram atualizados, regeneramos os alertas
+    if (patch.items || patch.employeeName || patch.companyId) {
+      const current = await this.getDelivery(id);
+      if (current) {
+        const company = await this.companiesRepo.get(current.companyId);
+        const companyName = company?.nomeFantasia || company?.razaoSocial || 'N/A';
+        const empName = current.employeeName || 'N/A';
+        
+        // Limpar todos os alertas desta entrega (ID completo) antes de regenerar
+        await this.alerts.deleteAlertsByOriginPrefix(`${id}_`);
+
+        // Usar itens atuais do banco (que já foram atualizados pelo update acima se patch.items existia)
+        const itemsToProcess = current.items || [];
+
+        for (const item of itemsToProcess) {
+          if (item.validUntil) {
+            await this.alerts.generateAlerts(
+              'epi', 
+              `${id}_${item.equipmentId}`, 
+              uid, 
+              item.validUntil,
+              {
+                companyId: current.companyId,
+                companyName,
+                documento: `${item.name} (${empName})`
+              }
+            );
+          }
+        }
+      }
+    }
   }
 
   async listDeliveriesPaged(employeeId: string | null, pageSize: number, startAfterDoc?: any) {
@@ -96,11 +167,23 @@ export class EpiDeliveriesService {
     return this.repo.listPaged(scoped, employeeId, pageSize, startAfterDoc);
   }
 
+  listenToDeliveriesPaged(employeeId: string | null, pageSize: number, callback: (res: any) => void) {
+    const isAdmin = this.isAdmin();
+    const scoped = isAdmin ? (this.session.adminScopeCompanyId() ?? null) : (this.getLoggedCompanyId() || null);
+
+    return this.repo.listenPaged(scoped, employeeId, pageSize, callback);
+  }
+
   async getDelivery(id: string): Promise<EpiDelivery | null> {
     return this.repo.get(id);
   }
 
+  listenToDelivery(id: string, callback: (data: EpiDelivery | null) => void) {
+    return this.repo.listen(id, callback);
+  }
+
   async deleteDelivery(id: string): Promise<void> {
+    await this.alerts.deleteAlertsByOriginPrefix(`${id}_`);
     return this.repo.delete(id);
   }
 }

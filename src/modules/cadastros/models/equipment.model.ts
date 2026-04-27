@@ -20,6 +20,7 @@ export interface Equipment {
   maintenanceCertificateNumber?: string;
 
   notes?: string;
+  invoiceNumber?: string; // Nº DA NOTA FISCAL/ANO
 
   status: 'ativo' | 'inativo';
 

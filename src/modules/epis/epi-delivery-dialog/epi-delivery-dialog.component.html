@@ -1,5 +1,13 @@
 <div class="dialog-header">
   <h2 mat-dialog-title>{{ isEdit ? 'Editar Entrega de EPI' : 'Nova Entrega de EPI' }}</h2>
+  <button
+    *ngIf="isEdit"
+    mat-icon-button
+    class="audit-btn"
+    matTooltip="Histórico de alterações"
+    (click)="openAuditHistory()">
+    <mat-icon>history</mat-icon>
+  </button>
 </div>
 
 <mat-dialog-content [formGroup]="form" class="delivery-dialog">
@@ -60,7 +68,7 @@
           {{ r.name }}
         </mat-checkbox>
       </div>
-      <div *ngIf="companyRisks.length === 0" class="empty-msg">Nenhum risco vinculado à empresa.</div>
+      <div *ngIf="companyRisks.length === 0" class="empty-msg">Nenhum risco vinculado ao cargo deste funcionário.</div>
     </div>
   </div>
 
@@ -77,7 +85,7 @@
         <mat-icon *ngIf="isEquipmentSelected(e.id)">check</mat-icon>
         {{ e.name }}
       </button>
-      <div *ngIf="suggestedEquipments.length === 0" class="empty-msg">Nenhum EPI vinculado à empresa.</div>
+      <div *ngIf="suggestedEquipments.length === 0" class="empty-msg">Nenhum EPI vinculado ao cargo deste funcionário.</div>
     </div>
   </div>
 
@@ -95,6 +103,15 @@
         <td mat-cell *matCellDef="let item"> {{ item.certificationNumber || 'N/A' }} </td>
       </ng-container>
 
+      <ng-container matColumnDef="validUntil">
+        <th mat-header-cell *matHeaderCellDef> Vencimento CA </th>
+        <td mat-cell *matCellDef="let item"> 
+          <span [ngClass]="{'text-danger': isExpired(item.validUntil)}">
+            {{ item.validUntil || 'N/A' }}
+          </span>
+        </td>
+      </ng-container>
+
       <ng-container matColumnDef="quantity">
         <th mat-header-cell *matHeaderCellDef> Qtd </th>
         <td mat-cell *matCellDef="let item"> 
@@ -102,10 +119,10 @@
         </td>
       </ng-container>
 
-      <ng-container matColumnDef="nextExchange">
-        <th mat-header-cell *matHeaderCellDef> Próx. Troca </th>
+      <ng-container matColumnDef="signature">
+        <th mat-header-cell *matHeaderCellDef> Assinatura </th>
         <td mat-cell *matCellDef="let item"> 
-          <input type="date" [(ngModel)]="item.nextExchangeDate" [ngModelOptions]="{standalone: true}" class="date-input">
+          <!-- Espaço em branco para assinatura manual -->
         </td>
       </ng-container>
 
@@ -132,11 +149,88 @@
       <mat-label>Data da Entrega</mat-label>
       <input matInput type="date" formControlName="deliveryDate">
     </mat-form-field>
+  </div>
 
-    <div class="actions-files">
-      <button mat-stroked-button (click)="downloadTerm()" [disabled]="!selectedEmployee">
-        <mat-icon>download</mat-icon> Baixar Termo
-      </button>
+  <!-- Upload do Termo Assinado -->
+  <div class="section" *ngIf="isEdit || deliveryItems.length > 0">
+    <mat-divider style="margin-bottom: 16px;"></mat-divider>
+    
+    <div class="signature-link-card" *ngIf="isEdit && data?.id">
+      <div class="card-header">
+        <mat-icon color="primary">link</mat-icon>
+        <h3 class="card-title">Link para Assinatura Digital</h3>
+      </div>
+      
+      <div class="card-body">
+        <div class="signature-flex-container">
+          <div class="qr-code-section">
+            <div class="qr-container">
+              <qrcode
+                [qrdata]="getSignatureLink()"
+                [width]="160"
+                [errorCorrectionLevel]="'M'">
+              </qrcode>
+              <p class="qr-hint">Escaneie para assinar</p>
+            </div>
+          </div>
+
+          <div class="link-info-section">
+            <p class="card-description">
+              Envie o link abaixo para o funcionário realizar a assinatura digital em qualquer dispositivo.
+            </p>
+
+            <div class="link-field-group">
+              <div class="link-input-wrapper">
+                <input type="text" [value]="getSignatureLink()" readonly #linkInput class="readonly-link-input">
+                <button mat-icon-button (click)="copyLink(linkInput.value)" matTooltip="Copiar link" class="copy-btn">
+                  <mat-icon>content_copy</mat-icon>
+                </button>
+              </div>
+              
+              <button mat-flat-button color="primary" (click)="openSignatureLink()" class="open-btn">
+                <mat-icon>open_in_new</mat-icon> Abrir Link
+              </button>
+            </div>
+
+            <div *ngIf="form.get('signed')?.value" class="signed-badge">
+              <div class="badge-content">
+                <mat-icon>check_circle</mat-icon>
+                <span>Assinado em {{ form.get('signatureDate')?.value | date:'dd/MM/yyyy HH:mm' }}</span>
+              </div>
+              <a [href]="form.get('signatureUrl')?.value" target="_blank" class="view-sig-link">
+                <mat-icon>image</mat-icon> Ver Assinatura
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <h3 class="section-title">Termo de Entrega Assinado (Upload)</h3>
+    <div class="upload-container">
+      <input #fileInput type="file" (change)="onFileSelected($event)" accept="application/pdf,image/*" style="display: none;">
+      
+      <div class="upload-actions">
+        <button mat-flat-button color="accent" (click)="fileInput.click()" [disabled]="uploadingFile">
+          <mat-icon>upload_file</mat-icon>
+          {{ (currentFileUrl || selectedFileName) ? 'Alterar Arquivo' : 'Selecionar Termo Assinado' }}
+        </button>
+
+        <button mat-stroked-button (click)="downloadTerm()" [disabled]="!selectedEmployee && !data">
+            <mat-icon>download</mat-icon> Baixar Termo
+        </button>
+
+        <span class="file-info" *ngIf="selectedFileName">
+          <mat-icon>insert_drive_file</mat-icon>
+          {{ selectedFileName }}
+        </span>
+
+        <a *ngIf="currentFileUrl && !selectedFileName" [href]="currentFileUrl" target="_blank" class="view-link">
+          <mat-icon>visibility</mat-icon>
+          Visualizar Termo Atual
+        </a>
+      </div>
+      <mat-hint>Anexe o documento assinado (PDF ou Imagem) para registro histórico.</mat-hint>
     </div>
   </div>
 

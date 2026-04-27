@@ -13,6 +13,10 @@ export const routes: Routes = [
         loadComponent: () => import('./core/auth/register.component').then(m => m.RegisterComponent)
     },
     {
+        path: 'assinatura/:entregaId',
+        loadComponent: () => import('./modules/epis/assinatura-entrega/assinatura-entrega.component').then(m => m.AssinaturaEntregaComponent)
+    },
+    {
         path: 'app',
         canActivate: [AuthGuard],
         loadComponent: () => import('./layout/shell/shell.component').then(m => m.ShellComponent),

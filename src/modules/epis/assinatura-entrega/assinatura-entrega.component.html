@@ -1,0 +1,107 @@
+<div class="container">
+  <mat-card class="signature-card">
+    <mat-card-header>
+      <mat-card-title class="main-title">Assinatura de Entrega de EPI</mat-card-title>
+    </mat-card-header>
+
+    <mat-card-content>
+      <div *ngIf="loading" class="state-container">
+        <mat-spinner diameter="40"></mat-spinner>
+        <p>Carregando dados da entrega...</p>
+      </div>
+
+      <div *ngIf="error && !loading" class="state-container error">
+        <mat-icon color="warn">error</mat-icon>
+        <p>Entrega não encontrada ou link inválido.</p>
+      </div>
+
+      <div *ngIf="entrega && !loading" class="delivery-container">
+        <!-- Dados do Funcionário e Empresa em Grid -->
+        <div class="delivery-info-grid">
+          <div class="info-item">
+            <span class="info-label">Empresa</span>
+            <span class="info-value">{{ entrega.companyName || 'N/A' }}</span>
+          </div>
+          <div class="info-item">
+            <span class="info-label">CNPJ</span>
+            <span class="info-value">{{ entrega.companyCnpj || 'N/A' }}</span>
+          </div>
+          <div class="info-item">
+            <span class="info-label">Data da Entrega</span>
+            <span class="info-value">{{ entrega.deliveryDate | date:'dd/MM/yyyy' }}</span>
+          </div>
+          <div class="info-item">
+            <span class="info-label">Funcionário</span>
+            <span class="info-value">{{ entrega.employeeName }}</span>
+          </div>
+          <div class="info-item">
+            <span class="info-label">Cargo</span>
+            <span class="info-value">{{ entrega.cargoName }}</span>
+          </div>
+        </div>
+
+        <div class="items-section">
+          <h3 class="section-title">Equipamentos Entregues</h3>
+          <div class="table-container">
+            <table class="modern-table">
+              <thead>
+                <tr>
+                  <th>EPI</th>
+                  <th>Quantidade</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let item of entrega.items">
+                  <td>{{ item.name }}</td>
+                  <td>{{ item.quantity }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="signature-section-card">
+          <h3 class="section-title centered">Assinatura Digital</h3>
+          
+          <div *ngIf="!entrega.signed" class="canvas-wrapper">
+            <div class="canvas-container">
+              <canvas #canvas 
+                (mousedown)="startDrawing($event)" 
+                (mousemove)="draw($event)" 
+                (mouseup)="stopDrawing($event)"
+                (mouseleave)="stopDrawing($event)"
+                (touchstart)="startDrawing($event)"
+                (touchmove)="draw($event)"
+                (touchend)="stopDrawing($event)"
+                (touchcancel)="stopDrawing($event)">
+              </canvas>
+            </div>
+            <div class="canvas-actions">
+              <button mat-stroked-button color="warn" (click)="clear()" [disabled]="saving">
+                <mat-icon>delete_outline</mat-icon> Limpar
+              </button>
+              <button mat-flat-button color="primary" (click)="sign()" [disabled]="saving">
+                <mat-icon *ngIf="!saving">check</mat-icon>
+                <mat-spinner *ngIf="saving" diameter="20" class="btn-spinner"></mat-spinner>
+                {{ saving ? 'Salvando...' : 'Confirmar Assinatura' }}
+              </button>
+            </div>
+          </div>
+
+          <div *ngIf="entrega.signed" class="signed-container">
+            <div class="success-banner">
+              <mat-icon>verified</mat-icon>
+              <div class="success-text">
+                <strong>Documento assinado digitalmente</strong>
+                <span>em {{ entrega.signatureDate | date:'dd/MM/yyyy HH:mm' }}</span>
+              </div>
+            </div>
+            <div class="signature-preview">
+              <img [src]="entrega.signatureUrl" alt="Assinatura">
+            </div>
+          </div>
+        </div>
+      </div>
+    </mat-card-content>
+  </mat-card>
+</div>

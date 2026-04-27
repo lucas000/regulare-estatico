@@ -1,4 +1,78 @@
-<mat-card>
-  <h2>Alertas</h2>
-  <p>Configuração e acompanhamento de alertas automáticos.</p>
+<mat-card class="alertas-card">
+  <div class="header">
+    <h2>Acompanhamento de Alertas</h2>
+    <p>Visualize todos os alertas gerados automaticamente pelo sistema.</p>
+  </div>
+
+  <div class="table-container" *ngIf="alertsList$ | async as alerts; else loading">
+    <table mat-table [dataSource]="alerts" class="full-width-table">
+      
+      <ng-container matColumnDef="origemTipo">
+        <th mat-header-cell *matHeaderCellDef>Tipo</th>
+        <td mat-cell *matCellDef="let group">
+          <span class="tipo-badge" [ngClass]="getOrigemClass(group.origemTipo)">
+            {{ getOrigemLabel(group.origemTipo) }}
+          </span>
+        </td>
+      </ng-container>
+
+      <ng-container matColumnDef="companyName" *ngIf="isAdmin()">
+        <th mat-header-cell *matHeaderCellDef>Empresa</th>
+        <td mat-cell *matCellDef="let group">{{ group.companyName || '---' }}</td>
+      </ng-container>
+
+      <ng-container matColumnDef="documento">
+        <th mat-header-cell *matHeaderCellDef>Documento</th>
+        <td mat-cell *matCellDef="let group" class="doc-cell">{{ group.documento || '---' }}</td>
+      </ng-container>
+
+      <ng-container matColumnDef="dataBaseVencimento">
+        <th mat-header-cell *matHeaderCellDef>Vencimento</th>
+        <td mat-cell *matCellDef="let group">{{ group.dataBaseVencimento | date:'dd/MM/yyyy' }}</td>
+      </ng-container>
+
+      <ng-container matColumnDef="proximoAlerta">
+        <th mat-header-cell *matHeaderCellDef>Próximo Alerta</th>
+        <td mat-cell *matCellDef="let group">
+          <ng-container *ngIf="group.proximoAlerta; else allSent">
+            <span [ngClass]="{'text-warn': getDiasRestantes(group.proximoAlerta.dataDisparo) <= 30 && getDiasRestantes(group.proximoAlerta.dataDisparo) > 0, 'text-danger': getDiasRestantes(group.proximoAlerta.dataDisparo) <= 0}">
+              {{ group.proximoAlerta.dataDisparo | date:'dd/MM/yyyy' }}
+              ({{ getDiasRestantes(group.proximoAlerta.dataDisparo) }}d)
+            </span>
+          </ng-container>
+          <ng-template #allSent>
+            <span class="status-badge enviado">Finalizado</span>
+          </ng-template>
+        </td>
+      </ng-container>
+
+      <ng-container matColumnDef="antecedencias">
+        <th mat-header-cell *matHeaderCellDef>Próximos Alertas</th>
+        <td mat-cell *matCellDef="let group">
+          <div class="offset-chips">
+            <span *ngFor="let a of group.alertas" 
+                  class="offset-mini-badge" 
+                  [ngClass]="{'enviado': a.enviado}"
+                  [matTooltip]="(a.enviado ? 'Enviado em: ' : 'Programado para: ') + (a.dataDisparo | date:'dd/MM/yyyy HH:mm')">
+              {{ a.offsetDias === 0 ? 'D' : a.offsetDias + 'd' }}
+            </span>
+          </div>
+        </td>
+      </ng-container>
+
+      <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+      <tr mat-row *matRowDef="let row; columns: displayedColumns;" (click)="openAlertSummary(row)" class="clickable-row"></tr>
+    </table>
+
+    <div *ngIf="alerts.length === 0" class="empty-state">
+      <mat-icon>notifications_off</mat-icon>
+      <p>Nenhum alerta gerado até o momento.</p>
+    </div>
+  </div>
+
+  <ng-template #loading>
+    <div class="loading-state">
+      <p>Carregando alertas...</p>
+    </div>
+  </ng-template>
 </mat-card>

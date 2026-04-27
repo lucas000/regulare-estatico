@@ -148,6 +148,15 @@
       </mat-form-field>
     </div>
 
+    <!-- Data de Renovação (para Licenciamento Ambiental específico) -->
+    <mat-form-field *ngIf="isEnvironmentalLicensingWithRenewal" appearance="outline" class="full-width">
+      <mat-label>Data de Renovação (Protocolo de Renovação)</mat-label>
+      <input matInput formControlName="renewalDate" placeholder="DD/MM/AAAA" maxlength="10" (input)="onDateInput($event, 'renewalDate')" />
+      <mat-hint>Data em que a renovação foi ou deve ser protocolada</mat-hint>
+      <mat-error *ngIf="form.get('renewalDate')?.hasError('required')">Obrigatório</mat-error>
+      <mat-error *ngIf="form.get('renewalDate')?.hasError('pattern')">Formato: DD/MM/AAAA</mat-error>
+    </mat-form-field>
+
     <!-- PDF da Licença: upload único via Firebase Storage (UI modernizada) -->
     <div class="full-width upload-group">
       <label>Anexar documento (PDF)</label>

@@ -96,6 +96,7 @@ export class CargosService {
       description: input.description ?? '',
       notes: input.notes ?? '',
       riskIds: input.riskIds ?? [],
+      epiIds: input.epiIds ?? [],
       status: input.status ?? 'ativo',
       createdAt: now,
       updatedAt: now,

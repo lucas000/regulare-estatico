@@ -3,6 +3,8 @@ import { LicenseConditionsRepository } from '../repositories/license-conditions.
 import { LicenseCondition, AuditUser, calculateConditionStatus } from '../models/license.model';
 import { SessionService } from '../../../core/services/session.service';
 import { UsersRepository } from '../../../core/services/users.repository';
+import { AlertsService } from '../../alertas/services/alerts.service';
+import { CompaniesRepository } from '../../cadastros/repositories/companies.repository';
 
 function makeId(prefix = '') {
   return `${prefix}${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
@@ -13,6 +15,8 @@ export class LicenseConditionsService {
   private readonly repo = inject(LicenseConditionsRepository);
   private readonly session = inject(SessionService);
   private readonly usersRepo = inject(UsersRepository);
+  private readonly alerts = inject(AlertsService);
+  private readonly companiesRepo = inject(CompaniesRepository);
 
   private async getAuditUser(): Promise<AuditUser> {
     const fbUser = this.session.user();
@@ -48,6 +52,19 @@ export class LicenseConditionsService {
     };
 
     await this.repo.create(condition);
+    
+    const company = await this.companiesRepo.get(condition.companyId);
+    await this.alerts.generateAlerts(
+      'condicionante', 
+      condition.id, 
+      audit.uid, 
+      condition.dueDate,
+      {
+        companyId: condition.companyId,
+        companyName: company?.nomeFantasia || company?.razaoSocial || 'N/A',
+        documento: condition.description
+      }
+    );
     return condition;
   }
 
@@ -67,6 +84,27 @@ export class LicenseConditionsService {
     }
 
     await this.repo.updateCondition(id, updateData);
+
+    if (updateData.dueDate || updateData.description || updateData.companyId) {
+      const current = await this.getById(id);
+      if (current) {
+        // Clear existing alerts for this specific condition before regenerating
+        await this.alerts.deleteAlertsByOrigin(id);
+
+        const company = await this.companiesRepo.get(current.companyId);
+        await this.alerts.generateAlerts(
+          'condicionante', 
+          id, 
+          audit.uid, 
+          current.dueDate,
+          {
+            companyId: current.companyId,
+            companyName: company?.nomeFantasia || company?.razaoSocial || 'N/A',
+            documento: current.description
+          }
+        );
+      }
+    }
   }
 
   async markAsCumprida(id: string): Promise<void> {

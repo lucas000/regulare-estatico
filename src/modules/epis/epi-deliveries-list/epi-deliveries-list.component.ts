@@ -12,10 +12,13 @@ import { MatPaginator, PageEvent, MatPaginatorModule } from '@angular/material/p
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { debounceTime, distinctUntilChanged } from 'rxjs/operators';
 import { Subscription } from 'rxjs';
+import { Unsubscribe } from 'firebase/firestore';
 import { EpiDeliveriesService } from '../services/epi-deliveries.service';
 import { EpiDelivery } from '../models/epi-delivery.model';
 import { EpiDeliveryDialogComponent } from '../epi-delivery-dialog/epi-delivery-dialog.component';
 import { SessionService } from '../../../core/services/session.service';
+import { StorageService } from '../../../core/services/storage.service';
+import { ConfirmDeleteDialogComponent } from '../../../core/components/confirm-delete-dialog.component';
 
 @Component({
   selector: 'app-epi-deliveries-list',
@@ -44,6 +47,7 @@ export class EpiDeliveriesListComponent implements OnInit, OnDestroy {
   private readonly cd = inject(ChangeDetectorRef);
   private readonly snack = inject(MatSnackBar);
   private readonly session = inject(SessionService);
+  private readonly storage = inject(StorageService);
 
   displayedColumns: string[] = ['employee', 'cargo', 'date', 'itemsCount', 'actions'];
   dataSource = new MatTableDataSource<EpiDelivery>([]);
@@ -57,6 +61,7 @@ export class EpiDeliveriesListComponent implements OnInit, OnDestroy {
   
   searchControl = new FormControl('');
   private subs = new Subscription();
+  private listSub?: Unsubscribe;
   private _reqId = 0;
 
   @ViewChild(MatPaginator) paginator?: MatPaginator;
@@ -72,6 +77,7 @@ export class EpiDeliveriesListComponent implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     this.subs.unsubscribe();
+    if (this.listSub) this.listSub();
   }
 
   async loadPage(index = 0, reset = false) {
@@ -86,6 +92,25 @@ export class EpiDeliveriesListComponent implements OnInit, OnDestroy {
     this.cd.markForCheck();
 
     try {
+      if (this.listSub) this.listSub();
+
+      // Se for a primeira página (index 0), podemos usar o listener para tempo real
+      if (index === 0 && !this.searchControl.value) {
+        this.listSub = this.service.listenToDeliveriesPaged(null, this.pageSize, (res) => {
+          if (reqId !== this._reqId) return;
+          this.dataSource.data = res.docs;
+          this.cursors[0] = res.lastDoc;
+          this.hasMore = res.docs.length === this.pageSize;
+          this.total = (this.pageIndex + (this.hasMore ? 2 : 1)) * this.pageSize;
+          if (this.paginator) {
+            this.paginator.length = this.total;
+          }
+          this.loading = false;
+          this.cd.markForCheck();
+        });
+        return;
+      }
+
       const startAfterDoc = index > 0 ? this.cursors[index - 1] : undefined;
       // Por enquanto a busca por termo não está implementada no repo de entregas, 
       // mas deixamos a estrutura pronta.
@@ -122,7 +147,17 @@ export class EpiDeliveriesListComponent implements OnInit, OnDestroy {
     ref.afterClosed().subscribe(async (res) => {
       if (!res) return;
       try {
-        await this.service.createDelivery(res);
+        const file = res._fileToUpload;
+        delete res._fileToUpload;
+
+        const id = await this.service.createDelivery(res);
+
+        if (file) {
+          const path = `epis/deliveries/${res.companyId}/${id}/receipt`;
+          const url = await this.storage.upload(path, await file.arrayBuffer(), file.type);
+          await this.service.updateDelivery(id, { receiptUrl: url, receiptName: file.name });
+        }
+
         this.snack.open('Entrega registrada com sucesso!', 'OK', { duration: 3000 });
         this.loadPage(0, true);
       } catch (e) {
@@ -136,6 +171,16 @@ export class EpiDeliveriesListComponent implements OnInit, OnDestroy {
     ref.afterClosed().subscribe(async (res) => {
       if (!res) return;
       try {
+        const file = res._fileToUpload;
+        delete res._fileToUpload;
+
+        if (file) {
+          const path = `epis/deliveries/${res.companyId}/${delivery.id}/receipt`;
+          const url = await this.storage.upload(path, await file.arrayBuffer(), file.type);
+          res.receiptUrl = url;
+          res.receiptName = file.name;
+        }
+
         await this.service.updateDelivery(delivery.id, res);
         this.snack.open('Entrega atualizada com sucesso!', 'OK', { duration: 3000 });
         this.loadPage(0, true);
@@ -146,14 +191,35 @@ export class EpiDeliveriesListComponent implements OnInit, OnDestroy {
   }
 
   async deleteDelivery(delivery: EpiDelivery) {
-    if (!confirm(`Deseja realmente excluir o registro de entrega para ${delivery.employeeName}?`)) return;
-    try {
-      await this.service.deleteDelivery(delivery.id);
-      this.snack.open('Entrega excluída!', 'OK', { duration: 2000 });
-      this.loadPage(0, true);
-    } catch (e) {
-      this.snack.open('Erro ao excluir entrega.', 'OK', { duration: 3000 });
-    }
+    const ref = this.dialog.open(ConfirmDeleteDialogComponent, {
+      data: {
+        title: 'Excluir Entrega',
+        message: `Deseja realmente excluir o registro de entrega para ${delivery.employeeName}?`,
+        itemName: delivery.employeeName
+      }
+    });
+
+    ref.afterClosed().subscribe(async (confirmed) => {
+      if (!confirmed) return;
+
+      try {
+        const user = this.session.user();
+        await this.service.updateDelivery(delivery.id, {
+          deleted: true,
+          deletedAt: new Date().toISOString(),
+          deletedBy: {
+            uid: user?.id || '',
+            name: user?.name || 'Sistema',
+            email: user?.email || ''
+          }
+        });
+
+        this.snack.open('Entrega excluída com sucesso!', 'OK', { duration: 2000 });
+        this.loadPage(0, true);
+      } catch (e) {
+        this.snack.open('Erro ao excluir entrega.', 'OK', { duration: 3000 });
+      }
+    });
   }
 
   formatDate(dateStr: string): string {

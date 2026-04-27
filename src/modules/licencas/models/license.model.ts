@@ -19,6 +19,7 @@ export interface License {
   periodicity?: LicensePeriodicity; // Periodicidade
   issueDate: string; // dd/mm/yyyy
   expirationDate: string; // dd/mm/yyyy
+  renewalDate: string; // dd/mm/yyyy (Obrigatório para alguns tipos de Licenciamento Ambiental)
   status: LicenseStatus;
   pdfUrl?: string;
   pdfName?: string; // nome do arquivo PDF armazenado
