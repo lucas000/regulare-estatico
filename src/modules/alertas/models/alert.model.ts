@@ -7,6 +7,7 @@ export interface Alert {
   companyName: string;
   dataBaseVencimento: string; // ISO format
   documento: string; // "epi (pessoa)", "tipo (numero)", "descricao"
+  userEmail?: string;
   dataDisparo: string; // ISO format or similar to be converted to Timestamp if needed
   offsetDias: number;
   enviado: boolean;
