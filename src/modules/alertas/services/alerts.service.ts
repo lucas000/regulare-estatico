@@ -37,6 +37,8 @@ export class AlertsService {
     // 3. Get config
     const config = ALERT_CONFIGS[configId] || ALERT_CONFIGS[`default_${origemTipo}`];
     
+    const userEmail = await this.getCompanyEmail(extra.companyName);
+    
     // 4. Create new alerts
     const batch = writeBatch(this.firestore);
     const alertsCol = collection(this.firestore, this.collectionName);
@@ -54,6 +56,7 @@ export class AlertsService {
         userId,
         companyId: extra.companyId,
         companyName: extra.companyName,
+        userEmail,
         dataBaseVencimento: expirationDate.toISOString(),
         documento: extra.documento,
         dataDisparo: alertDate.toISOString(),
@@ -116,5 +119,21 @@ export class AlertsService {
       return new Date(y, m - 1, d);
     }
     return new Date(dateStr);
+  }
+
+  private async getCompanyEmail(companyName: string): Promise<string | undefined> {
+    const companiesCol = collection(this.firestore, 'companies');
+    const q = query(companiesCol, where('razaoSocial', '==', companyName));
+    const snapshot = await getDocs(q);
+
+    if (snapshot.empty) {
+      // Tentar buscar por nomeFantasia se razaoSocial não retornar nada
+      const q2 = query(companiesCol, where('nomeFantasia', '==', companyName));
+      const snapshot2 = await getDocs(q2);
+      if (snapshot2.empty) return undefined;
+      return snapshot2.docs[0].data()['institutionalEmail'];
+    }
+
+    return snapshot.docs[0].data()['institutionalEmail'];
   }
 }
