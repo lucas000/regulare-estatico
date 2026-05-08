@@ -259,15 +259,38 @@ export class DashboardComponent implements OnInit {
     } catch { return dateStr; }
   }
 
-  navigateTo(path: string, status?: string) {
+  navigateTo(type: 'Licenças' | 'Condicionantes' | 'EPI' | string, status?: string) {
     // Usamos o caminho absoluto baseado no app.routes.ts para evitar redirecionamentos ao login
     // O prefixo '/app' é o shell definido no seu roteamento principal
-    this.router.navigate(['/app', path], { 
-      queryParams: status ? { status } : {} 
+    let path: string;
+    let finalStatus = status;
+
+    switch (type) {
+      case 'Licenças':
+        path = 'licencas';
+        // Traduz o status genérico do dashboard para a chave técnica da tela de licenças
+        if (status === 'vencido') finalStatus = 'vencida';
+        else finalStatus = status;
+        break;
+      case 'Condicionantes':
+        path = 'condicionantes';
+        // Para condicionantes, 'em_dia' no dashboard equivale ao status 'cumprida'
+        if (status === 'em_dia') finalStatus = 'cumprida';
+        else if (status === 'vencido') finalStatus = 'vencida';
+        else finalStatus = status;
+        break;
+      case 'EPI':
+        path = 'epis';
+        // Para EPIs mantemos o status padrão
+        break;
+      default: path = type; // Fallback for direct path strings like 'licencas'
+    }
+    this.router.navigate(['/app', path], {
+      state: { status: finalStatus }
     });
   }
 
-  async openItem(item: AgendaItem) {
+  async openItem(item: Obligation | AgendaItem) {
     if (!item.id) return;
 
     this.loading.set(true);
@@ -276,8 +299,14 @@ export class DashboardComponent implements OnInit {
       let dialogData: any = {};
       let config = { width: '900px', maxWidth: '95vw', disableClose: true };
 
+      // Normalização para suportar ambos os modelos (Obligation e AgendaItem)
+      const rawType = (item as any).tipo || (item as any).type;
+      const isEpi = rawType === 'EPI';
+      const isLicense = rawType === 'Licença' || rawType === 'Licenças';
+      const isCondition = rawType === 'Condicionante' || rawType === 'Condicionantes';
+
       // 1. Identifica o tipo e busca o documento completo no Firestore
-      if (item.type === 'EPI') {
+      if (isEpi) {
         const docRef = doc(this.firestore, 'epi_deliveries', item.id);
         const sn = await getDoc(docRef);
         if (!sn.exists()) throw new Error('Entrega não encontrada');
@@ -285,7 +314,7 @@ export class DashboardComponent implements OnInit {
         dialogComponent = EpiDeliveryDialogComponent;
         dialogData = { ...sn.data(), id: sn.id };
 
-      } else if (item.type === 'Licença') {
+      } else if (isLicense) {
         const docRef = doc(this.firestore, 'licenses', item.id);
         const sn = await getDoc(docRef);
         if (!sn.exists()) throw new Error('Licença não encontrada');
@@ -296,7 +325,7 @@ export class DashboardComponent implements OnInit {
         dialogComponent = LicenseDialogComponent;
         dialogData = { ...sn.data(), id: sn.id, isEdit: true, companies };
 
-      } else if (item.type === 'Condicionante') {
+      } else if (isCondition) {
         const docRef = doc(this.firestore, 'license_conditions', item.id);
         const sn = await getDoc(docRef);
         if (!sn.exists()) throw new Error('Condicionante não encontrada');

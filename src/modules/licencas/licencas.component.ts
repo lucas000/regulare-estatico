@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, inject, OnDestroy, OnInit, ChangeDetectorRef, ViewChild } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, OnDestroy, OnInit, ChangeDetectorRef, ViewChild, Input } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatCardModule } from '@angular/material/card';
 import { MatTableModule, MatTableDataSource } from '@angular/material/table';
@@ -50,6 +50,8 @@ import { Unit } from '../cadastros/models/unit.model';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class LicencasComponent implements OnInit, OnDestroy {
+  @Input() status?: string;
+
   private readonly licensesService = inject(LicensesService);
   private readonly dialog = inject(MatDialog);
   private readonly cd = inject(ChangeDetectorRef);
@@ -91,6 +93,13 @@ export class LicencasComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.loadCompanies();
+    
+    // Prioriza o status vindo do 'state' (Dashboard) ou fallback para '@Input' (URL)
+    const initialStatus = history.state?.status || this.status;
+    if (initialStatus) {
+      this.statusFilter.setValue(initialStatus, { emitEvent: false });
+    }
+
     this.setupFilters();
     this.loadPage(0, true);
   }

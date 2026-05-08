@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, inject, OnDestroy, OnInit, ChangeDetectorRef, ViewChild } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, OnDestroy, OnInit, ChangeDetectorRef, ViewChild, Input } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatCardModule } from '@angular/material/card';
 import { MatTableModule, MatTableDataSource } from '@angular/material/table';
@@ -47,6 +47,8 @@ import { ConfirmDeleteDialogComponent, ConfirmDeleteData } from '../../core/comp
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class CondicionantesComponent implements OnInit, OnDestroy {
+  @Input() status?: string;
+
   private readonly conditionsService = inject(LicenseConditionsService);
   private readonly cd = inject(ChangeDetectorRef);
   private readonly snack = inject(MatSnackBar);
@@ -79,6 +81,12 @@ export class CondicionantesComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.loadCompanies();
+
+    // Prioriza o status vindo do 'state' (Dashboard) ou fallback para '@Input' (URL)
+    const initialStatus = history.state?.status || this.status;
+    if (initialStatus) {
+      this.statusFilter.setValue(initialStatus, { emitEvent: false });
+    }
     this.setupFilters();
     // Carregamento inicial ocorrerá ao final de loadCompanies(),
     // garantindo que empresas/escopo estejam definidos antes da busca

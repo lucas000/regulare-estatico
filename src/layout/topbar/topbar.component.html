@@ -5,7 +5,9 @@
 
   <div class="title-area">
     <mat-icon class="title-icon">chevron_right</mat-icon>
-    <span class="title-text" *ngIf="title$ | async as title">{{ title === 'Licencas' ? 'Obrigação Legal Periódica' : title }}</span>
+    <span class="title-text" *ngIf="title$ | async as title">{{
+      title === 'Licencas' ? 'Obrigação Legal Periódica' : title
+    }}</span>
   </div>
 
   <span class="spacer"></span>
@@ -13,10 +15,19 @@
   <div class="topbar-actions">
     <!-- ADMIN: seletor de escopo de empresa -->
     <ng-container *ngIf="isAdmin(); else clienteCompanyName">
-      <mat-spinner *ngIf="changingCompany" diameter="24" style="margin-right: 12px;"></mat-spinner>
-      <mat-form-field appearance="outline" class="company-scope-field" [class.disabled-field]="changingCompany">
+      <mat-spinner
+        *ngIf="changingCompany"
+        diameter="24"
+        style="margin-right: 12px"
+      ></mat-spinner>
+      <mat-form-field
+        appearance="outline"
+        class="company-scope-field"
+        [class.disabled-field]="changingCompany"
+      >
         <mat-label style="color: white">Escopo: Empresa</mat-label>
-        <mat-select style="color: white"
+        <mat-select
+          style="color: white"
           [(ngModel)]="selectedCompanyIdModel"
           (ngModelChange)="onSelectedCompanyChange($event)"
           [disabled]="changingCompany"
@@ -25,33 +36,48 @@
           <mat-option *ngIf="companiesLoading" disabled>
             Carregando empresas...
           </mat-option>
-          <mat-option *ngIf="!companiesLoading && companies.length === 0" disabled>
+          <mat-option
+            *ngIf="!companiesLoading && companies.length === 0"
+            disabled
+          >
             Nenhuma empresa encontrada
           </mat-option>
-          <mat-option *ngFor="let c of companies" [value]="c.id">{{ c.name }}</mat-option>
+          <mat-option *ngFor="let c of companies" [value]="c.id">{{
+            c.name
+          }}</mat-option>
         </mat-select>
       </mat-form-field>
     </ng-container>
 
-    <!-- CLIENTE: apenas mostra o nome da empresa -->
-    <ng-template #clienteCompanyName>
-      <span class="company-name">{{ companyName() }}</span>
-    </ng-template>
-
-      <button mat-icon-button [matBadge]="notificationsCount" [matBadgeHidden]="notificationsCount===0" matBadgeColor="accent" aria-label="Notificações">
-          <mat-icon class="icon-accent">notifications</mat-icon>
-      </button>
-
-      <button mat-icon-button [matBadge]="alertsCount" [matBadgeHidden]="alertsCount===0" matBadgeColor="warn" aria-label="Alertas">
-          <mat-icon class="icon-accent">warning</mat-icon>
-      </button>
+    <!-- Ícone de Notificações -->
+    <button
+      mat-icon-button
+      [matBadge]="alertsService.count()"
+      [matBadgeHidden]="alertsService.count() === 0"
+      matBadgeColor="accent"
+      aria-label="Notificações"
+      (click)="openNotifications()"
+    >
+      <mat-icon class="icon-accent">notifications</mat-icon>
+    </button>
 
     <!-- User icon only opens the menu -->
-    <button mat-icon-button [matMenuTriggerFor]="userMenu" aria-label="Abrir menu do usuário">
+    <button
+      mat-icon-button
+      [matMenuTriggerFor]="userMenu"
+      aria-label="Abrir menu do usuário"
+    >
       <mat-icon>account_circle</mat-icon>
     </button>
     <mat-menu #userMenu="matMenu">
-      <button mat-menu-item (click)="logout()"><mat-icon>logout</mat-icon> Sair</button>
+      <button mat-menu-item (click)="logout()">
+        <mat-icon>logout</mat-icon> Sair
+      </button>
     </mat-menu>
   </div>
+
+  <!-- CLIENTE: apenas mostra o nome da empresa (movido para depois das ações) -->
+  <ng-template #clienteCompanyName>
+    <span class="company-name">{{ companyName() }}</span>
+  </ng-template>
 </mat-toolbar>
