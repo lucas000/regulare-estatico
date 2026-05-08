@@ -3,7 +3,11 @@
 
   <!-- LINHA 1: 4 Cards de Indicadores (Lado a Lado) -->
   <div class="row-overview">
-    <mat-card class="stat-card compliance-card">
+    <mat-card
+      class="stat-card compliance-card"
+      (click)="navigateTo('Licenças')"
+      style="cursor: pointer"
+    >
       <mat-card-content>
         <div class="stat-content">
           <span class="label">Índice de Conformidade</span>
@@ -13,7 +17,12 @@
       </mat-card-content>
     </mat-card>
 
-    <mat-card class="stat-card" [ngClass]="riskInfo().class">
+    <mat-card
+      class="stat-card"
+      [ngClass]="riskInfo().class"
+      (click)="navigateTo('Licenças')"
+      style="cursor: pointer"
+    >
       <mat-card-content>
         <div class="stat-content">
           <span class="label">Risco Regulatório</span>
@@ -22,7 +31,11 @@
       </mat-card-content>
     </mat-card>
 
-    <mat-card class="stat-card total-card">
+    <mat-card
+      class="stat-card total-card"
+      (click)="navigateTo('Licenças')"
+      style="cursor: pointer"
+    >
       <mat-card-content>
         <div class="stat-content">
           <span class="label">Obrigações Totais</span>
@@ -31,7 +44,12 @@
       </mat-card-content>
     </mat-card>
 
-    <mat-card class="stat-card" [ngClass]="pendenciesInfo().class">
+    <mat-card
+      class="stat-card"
+      [ngClass]="pendenciesInfo().class"
+      (click)="navigateTo('Licenças', 'vencido')"
+      style="cursor: pointer"
+    >
       <mat-card-content>
         <div class="stat-content">
           <span class="label">Pendências Regulatórias</span>
@@ -71,11 +89,15 @@
         <div
           class="alert-item"
           *ngFor="let item of rawData() | filterByStatus: 'vencido'"
+          (click)="openItem(item)"
+          style="cursor: pointer"
         >
           <mat-icon color="warn">error</mat-icon>
           <div class="alert-info">
             <strong>{{ item.nome }}</strong>
-            <span>há {{ getAbsoluteDays(item.dataVencimento) }} dias</span>
+            <span
+              >Vencido há {{ getAbsoluteDays(item.dataVencimento) }} dias</span
+            >
           </div>
         </div>
       </mat-card-content>
@@ -88,7 +110,11 @@
       <mat-card-content>
         <table class="reg-table">
           <tbody>
-            <tr *ngFor="let item of upcoming30Days()">
+            <tr
+              *ngFor="let item of upcoming30Days()"
+              (click)="openItem(item)"
+              style="cursor: pointer"
+            >
               <td class="upcoming-item-cell">
                 <div class="name">{{ item.nome }}</div>
                 <div class="date">
@@ -128,17 +154,32 @@
           <tbody>
             <tr *ngFor="let summary of summaryByType()">
               <td>
-                <strong>{{ summary.tipo }}</strong>
+                <strong
+                  (click)="navigateTo(summary.tipo)"
+                  style="cursor: pointer"
+                  >{{ summary.tipo }}</strong
+                >
               </td>
-              <td>{{ summary.total }}</td>
-              <td>
+              <td (click)="navigateTo(summary.tipo)" style="cursor: pointer">
+                {{ summary.total }}
+              </td>
+              <td
+                (click)="navigateTo(summary.tipo, 'em_dia')"
+                style="cursor: pointer"
+              >
                 <span class="indicator-dot success"></span> {{ summary.inDay }}
               </td>
-              <td>
+              <td
+                (click)="navigateTo(summary.tipo, 'a_vencer')"
+                style="cursor: pointer"
+              >
                 <span class="indicator-dot warning"></span>
                 {{ summary.upcoming }}
               </td>
-              <td>
+              <td
+                (click)="navigateTo(summary.tipo, 'vencido')"
+                style="cursor: pointer"
+              >
                 <span class="indicator-dot danger"></span>
                 {{ summary.irregular }}
               </td>
