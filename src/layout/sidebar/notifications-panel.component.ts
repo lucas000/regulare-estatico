@@ -1,9 +1,14 @@
 import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { MatDialogModule, MatDialogRef } from '@angular/material/dialog';
+import { MatDialogModule, MatDialogRef, MatDialog } from '@angular/material/dialog';
 import { MatListModule } from '@angular/material/list';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
+import { Firestore, doc, getDoc } from '@angular/fire/firestore';
+import { CompaniesService } from '../../modules/cadastros/services/companies.service';
+import { LicenseDialogComponent } from '../../modules/licencas/components/license-dialog.component';
+import { EpiDeliveryDialogComponent } from '../../modules/epis/epi-delivery-dialog/epi-delivery-dialog.component';
+import { ConditionDialogComponent } from '../../modules/licencas/components/condition-dialog.component';
 import { AlertsService, AlertNotification } from '../../core/services/alerts.service';
 
 @Component({
@@ -23,7 +28,7 @@ import { AlertsService, AlertNotification } from '../../core/services/alerts.ser
           <p>Nenhuma notificação recente</p>
         </div>
 
-        <mat-list-item *ngFor="let alert of alertsService.alerts(); trackBy: trackByFn" class="notification-item">
+        <mat-list-item *ngFor="let alert of alertsService.alerts(); trackBy: trackByFn" class="notification-item" (click)="openAlertDetail(alert)">
           <mat-icon matListItemIcon [color]="alert.origemTipo === 'epi' ? 'accent' : 'primary'">
             {{ alert.origemTipo === 'epi' ? 'engineering' : 'description' }}
           </mat-icon>
@@ -51,11 +56,63 @@ import { AlertsService, AlertNotification } from '../../core/services/alerts.ser
     .empty-state mat-icon { font-size: 48px; width: 48px; height: 48px; }
   `]
 })
-export class NotificationsPanelComponent {
+export class NotificationsPanelComponent { 
   public readonly alertsService = inject(AlertsService);
   private readonly dialogRef = inject(MatDialogRef);
+  private readonly dialog = inject(MatDialog);
+  private readonly firestore = inject(Firestore);
+  private readonly companiesService = inject(CompaniesService);
 
   close() { this.dialogRef.close(); }
 
   trackByFn(index: number, item: AlertNotification) { return item.id; }
+
+  async openAlertDetail(alert: AlertNotification) {
+    if (!alert.origemId) return;
+
+    this.close(); // Fecha o painel de notificações
+
+    try {
+      let dialogComponent: any;
+      let dialogData: any = {};
+      let config = { width: '900px', maxWidth: '95vw', disableClose: true };
+
+      const originType = alert.origemTipo;
+
+      if (originType === 'epi') {
+        const docRef = doc(this.firestore, 'epi_deliveries', alert.origemId);
+        const sn = await getDoc(docRef);
+        if (!sn.exists()) throw new Error('Entrega de EPI não encontrada');
+        
+        dialogComponent = EpiDeliveryDialogComponent;
+        dialogData = { ...sn.data(), id: sn.id };
+
+      } else if (originType === 'licenca') {
+        const docRef = doc(this.firestore, 'licenses', alert.origemId);
+        const sn = await getDoc(docRef);
+        if (!sn.exists()) throw new Error('Licença não encontrada');
+        
+        const companies = await this.companiesService.listCompanies();
+        
+        dialogComponent = LicenseDialogComponent;
+        dialogData = { ...sn.data(), id: sn.id, isEdit: true, companies };
+
+      } else if (originType === 'condicionante') {
+        const docRef = doc(this.firestore, 'license_conditions', alert.origemId);
+        const sn = await getDoc(docRef);
+        if (!sn.exists()) throw new Error('Condicionante não encontrada');
+        
+        dialogComponent = ConditionDialogComponent;
+        dialogData = { ...sn.data(), id: sn.id, isEdit: true };
+        config.width = '600px';
+      }
+
+      if (dialogComponent) {
+        this.dialog.open(dialogComponent, { ...config, data: dialogData });
+      }
+    } catch (err) {
+      console.error('Erro ao abrir detalhe do alerta:', err);
+      // Opcional: exibir um snackbar para o usuário informando o erro
+    }
+  }
 }

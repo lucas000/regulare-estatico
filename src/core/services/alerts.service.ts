@@ -43,36 +43,42 @@ export class AlertsService {
 
   private initListener(user: any) {
     const alertsCol = collection(this.firestore, 'alerts');
+    const isAdmin = this.session.hasRole(['ADMIN']);
+    const scopeId = this.session.adminScopeCompanyId();
     
-    // Busca os últimos 20 alertas enviados
-    const q = query(
-      alertsCol,
+    // Construímos a query de forma mais inteligente
+    let constraints: any[] = [
       where('enviado', '==', true),
       orderBy('enviadoEm', 'desc'),
-      limit(20)
-    );
+      limit(100) // Aumentamos o limite para garantir que o filtro client-side encontre os registros
+    ];
+
+    // Se não for admin, filtramos por empresa já no servidor para evitar lixo
+    if (!isAdmin && user.companyId) {
+      constraints.unshift(where('companyId', '==', user.companyId));
+    } 
+    // Se for admin com escopo, também filtramos no servidor
+    else if (isAdmin && scopeId) {
+      constraints.unshift(where('companyId', '==', scopeId));
+    }
+
+    const q = query(alertsCol, ...constraints);
 
     return onSnapshot(q, 
       (snapshot) => {
         const all = snapshot.docs.map(d => ({ id: d.id, ...d.data() } as AlertNotification));
-        console.log('[AlertsService] Notificações brutas do Firestore:', all.length);
       
         const filtered = all.filter(a => {
-          const isAdmin = this.session.hasRole(['ADMIN']);
-          const scopeId = this.session.adminScopeCompanyId();
-
           if (isAdmin) {
             return scopeId ? a.companyId === scopeId : true;
           }
           return a.companyId === user.companyId || a.userId === user.id;
         });
 
-        console.log('[AlertsService] Notificações após filtro de segurança:', filtered.length);
         this._alerts.set(filtered);
       },
       (error) => {
-        console.error('[AlertsService] Erro no listener de notificações:', error);
-        // Se houver erro de índice, o Firestore enviará um link no log do console para criá-lo automaticamente
+        console.error('[AlertsService] Erro crítico no Firestore. Se for erro de INDEX, clique no link abaixo:', error);
       }
     );
   }
