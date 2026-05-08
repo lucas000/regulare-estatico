@@ -11,19 +11,37 @@ import { Router, NavigationEnd, ActivatedRoute } from '@angular/router';
 import { filter, map } from 'rxjs/operators';
 import { Subscription, Observable, merge, of } from 'rxjs';
 import { MatBadgeModule } from '@angular/material/badge';
+import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { FormsModule } from '@angular/forms';
 import { CompaniesRepository } from '../../modules/cadastros/repositories/companies.repository';
 import { CompaniesService } from '../../modules/cadastros/services/companies.service';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { AlertsService } from '../../core/services/alerts.service';
+import { NotificationsPanelComponent } from '../sidebar/notifications-panel.component';
 
 @Component({
   selector: 'app-topbar',
   standalone: true,
-  imports: [CommonModule, MatToolbarModule, MatButtonModule, MatIconModule, MatMenuModule, MatSelectModule, MatOptionModule, MatBadgeModule, FormsModule, MatSnackBarModule, MatProgressSpinnerModule],
+  imports: [
+    CommonModule,
+    MatToolbarModule,
+    MatButtonModule,
+    MatIconModule,
+    MatMenuModule,
+    MatSelectModule,
+    MatOptionModule,
+    MatBadgeModule,
+    FormsModule,
+    MatSnackBarModule,
+    MatProgressSpinnerModule,
+    MatFormFieldModule,
+    MatDialogModule
+  ],
   templateUrl: './topbar.component.html',
   styleUrls: ['./topbar.component.scss'],
-  changeDetection: ChangeDetectionStrategy.OnPush,
+  changeDetection: ChangeDetectionStrategy.OnPush, // Mantido para performance
 })
 export class TopbarComponent implements OnDestroy, OnInit {
   @Output() toggle = new EventEmitter<void>();
@@ -33,13 +51,11 @@ export class TopbarComponent implements OnDestroy, OnInit {
   private readonly companiesRepo = inject(CompaniesRepository);
   private readonly companiesService = inject(CompaniesService);
   private readonly snackBar = inject(MatSnackBar);
+  private readonly dialog = inject(MatDialog); // Injetar MatDialog
+  public readonly alertsService = inject(AlertsService); // Injetar AlertsService
 
   title$: Observable<string>;
   private sub: Subscription;
-
-  // placeholders for future badge counts
-  notificationsCount = 0;
-  alertsCount = 0;
 
   // estado para UI
   companiesLoading = false;
@@ -187,5 +203,17 @@ export class TopbarComponent implements OnDestroy, OnInit {
   private humanizeSegment(seg: string) {
     if (!seg) return '';
     return seg.replace(/[-_]/g, ' ').replace(/\b\w/g, (m) => m.toUpperCase());
+  }
+
+  openNotifications() {
+    this.dialog.open(NotificationsPanelComponent, {
+      width: '350px',
+      position: { right: '0', top: '0' },
+      height: '100vh',
+      panelClass: 'side-panel-container',
+      hasBackdrop: true,
+      exitAnimationDuration: '200ms',
+      enterAnimationDuration: '200ms'
+    });
   }
 }
